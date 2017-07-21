@@ -1,5 +1,5 @@
 #include "uart.h"
-#include "lowio.h"
+#include "utils.h"
 
 #define UART_REG_BASE_ADDR		0xE2030000
 #define UARTCLKGEN_REG_BASE_ADDR	0xE3105000
@@ -31,7 +31,7 @@ static unsigned int value_for_baudrate(unsigned int baudrate)
 {
 	int i;
 
-	for (i = 0; i < sizeof(baudrate_table) / sizeof(*baudrate_table); i += 2) {
+	for (i = 0; i < ARRAY_SIZE(baudrate_table); i += 2) {
 		if (baudrate == baudrate_table[i])
 			return baudrate_table[i + 1];
 	}

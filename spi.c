@@ -1,5 +1,5 @@
 #include "spi.h"
-#include "lowio.h"
+#include "utils.h"
 
 #define SPI0_BASE_ADDR			0xE0A00000
 #define SPI1_BASE_ADDR			0xE0A10000

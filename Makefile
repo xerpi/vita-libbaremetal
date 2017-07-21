@@ -1,11 +1,11 @@
 TARGET   = baremetal-sample
-OBJS = start.o main.o lowio.o uart.o spi.o syscon.o hdmi.o libc.o
+OBJS = start.o main.o libc.o utils.o pervasive.o cdram.o uart.o gpio.o i2c.o iftu.o dsi.o spi.o syscon.o hdmi.o
 
 PREFIX  = arm-vita-eabi
 CC      = $(PREFIX)-gcc
 AS      = $(PREFIX)-as
 OBJCOPY = $(PREFIX)-objcopy
-CFLAGS  = -Wall -O0 -mcpu=cortex-a9 -mthumb-interwork
+CFLAGS  = -Wall -O0 -mcpu=cortex-a9 -mthumb-interwork -Wno-unused-const-variable
 LDFLAGS = -T linker.ld -nostartfiles -nostdlib -lgcc
 ASFLAGS =
 
