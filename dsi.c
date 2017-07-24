@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "dsi.h"
 #include "pervasive.h"
 #include "libc.h"
@@ -74,7 +75,7 @@ static const struct dsi_timing_info stru_BD0A8C = {0,   0x2D5190, &stru_BD0B34, 
 static const struct dsi_timing_info stru_BD0AE8 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0xABE, 0x465, 0, 0x27E, 0x2C,  0x94, 4,   5, 0x24};
 
 static struct {
-	unsigned int value;
+	unsigned int vic;
 	const struct dsi_timing_info *timing_info;
 } dsi_timing_info_lookup[] = {
 	{0, &stru_BD0D14},
@@ -94,6 +95,19 @@ static struct {
 	{0x8730, &stru_BD0AE8},
 };
 
+static const struct dsi_timing_info *
+dsi_get_timing_info_for_vic(unsigned int vic)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(dsi_timing_info_lookup); i++) {
+		if (dsi_timing_info_lookup[i].vic == vic)
+			return dsi_timing_info_lookup[i].timing_info;
+	}
+
+	return NULL;
+}
+
 void dsi_init(void)
 {
 	if ((pervasive_read_misc(0x0000) & 0x1FF00) > 0xFF)
@@ -102,16 +116,38 @@ void dsi_init(void)
 		memcpy(&stru_A19358, &stru_BD0F08, sizeof(stru_A19358));
 }
 
-void dsi_enable_bus(int bus)
+int dsi_get_dimensions_for_vic(unsigned int vic, unsigned int *width, unsigned int *height)
+{
+	const struct dsi_timing_info *info = dsi_get_timing_info_for_vic(vic);
+	if (!info)
+		return -1;
+
+	if (width) {
+		*width = info->htotal - (info->HBP + info->HFP) - info->HSW;
+		if (info->flags & (1 << 3))
+			*width -= 2;
+	}
+
+	if (height) {
+		if (info->mode == 1)
+			*height = info->vtotal + 1 - 2 * (info->VFP + info->VSW + info->VBP);
+		else
+			*height = info->vtotal - (info->VBP + info->VSW) - info->VFP;
+	}
+
+	return 0;
+}
+
+void dsi_enable_bus(int bus, unsigned int vic)
 {
 	static const int pixel_size = 24;
 	static const int lanes = 3;
 	static const int unk07 = 2;
 
-	unsigned int packet[40];
+	unsigned int packet[64];
 	unsigned int packet_size;
 	const struct dsi_timing_subinfo *subinfo;
-	const struct dsi_timing_info *timing_info = dsi_timing_info_lookup[10].timing_info; // 0x8600
+	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
 	volatile unsigned int *dsi_regs = DSI_REGS(bus);
 
 	pervasive_dsi_misc_unk(bus);
@@ -627,7 +663,7 @@ LABEL_18:
 	dsi_regs[0x147] = 1;
 }
 
-void dsi_unk(int bus, int unk)
+void dsi_unk(int bus, unsigned int vic, int unk)
 {
 	static const unsigned int bus_index = 1;
 	static const unsigned int lanes = 3;
@@ -636,7 +672,7 @@ void dsi_unk(int bus, int unk)
 
 	static const unsigned int lookup[] = {2, 2, 3, 4};
 
-	const struct dsi_timing_info *timing_info = dsi_timing_info_lookup[10].timing_info; // 0x8600
+	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
 	volatile unsigned int *dsi_regs = DSI_REGS(bus);
 
 	unsigned int flags = timing_info->flags;

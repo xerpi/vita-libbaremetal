@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "pervasive.h"
 #include "utils.h"
 
@@ -122,6 +123,19 @@ static inline void pervasive_mask_and_not(unsigned int addr, unsigned int val)
 	);
 }
 
+static const struct pervasive_dsi_timing_info *
+pervasive_get_dsi_timing_info_for_pixelclock(unsigned int pixelclock)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(pervasive_dsi_timing_info_lookup); i++) {
+		if (pervasive_dsi_timing_info_lookup[i].pixelclock == pixelclock)
+			return pervasive_dsi_timing_info_lookup[i].timing_info;
+	}
+
+	return NULL;
+}
+
 unsigned int pervasive_read_misc(unsigned int offset)
 {
 	return *(unsigned int *)(PERVASIVE_MISC_BASE_ADDR + offset);
@@ -179,20 +193,9 @@ void pervasive_reset_exit_dsi(int bus, int value)
 
 void pervasive_dsi_set_pixelclock(int bus, int pixelclock)
 {
-	int i;
-	volatile unsigned int *baseclk_dsi_regs;
-	const struct pervasive_dsi_timing_info *timing_info;
-
-	for (i = 0; i < ARRAY_SIZE(pervasive_dsi_timing_info_lookup); i++) {
-		if (pervasive_dsi_timing_info_lookup[i].pixelclock == pixelclock)
-			break;
-	}
-
-	if (i >= ARRAY_SIZE(pervasive_dsi_timing_info_lookup))
-		return;
-
-	timing_info = pervasive_dsi_timing_info_lookup[i].timing_info;
-	baseclk_dsi_regs = PERVASIVE_BASECLK_DSI_REGS(bus);
+	volatile unsigned int *baseclk_dsi_regs = PERVASIVE_BASECLK_DSI_REGS(bus);
+	const struct pervasive_dsi_timing_info *timing_info =
+		pervasive_get_dsi_timing_info_for_pixelclock(pixelclock);
 
 	baseclk_dsi_regs[2] = 1;
 	baseclk_dsi_regs[1] = 1;

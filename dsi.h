@@ -2,7 +2,8 @@
 #define DSI_H
 
 void dsi_init(void);
-void dsi_enable_bus(int bus);
-void dsi_unk(int bus, int unk);
+int dsi_get_dimensions_for_vic(unsigned int vic, unsigned int *width, unsigned int *height);
+void dsi_enable_bus(int bus, unsigned int vic);
+void dsi_unk(int bus, unsigned int vic, int unk);
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef IFTU_H
 #define IFTU_H
 
-struct iftu_plane_info {
+struct iftu_plane_source_fb_info {
 	unsigned int pixelformat;
 	unsigned int width;
 	unsigned int height;
@@ -25,7 +25,32 @@ struct iftu_plane_info {
 	unsigned int hback_porch;
 };
 
+struct iftu_csc_params {
+	unsigned int unk00;
+	unsigned int unk04;
+	unsigned int unk08;
+	unsigned int unk0C;
+	unsigned int unk10;
+	unsigned int unk14;
+	unsigned int csc_rr;
+	unsigned int csc_rg;
+	unsigned int csc_rb;
+	unsigned int csc_gr;
+	unsigned int csc_gg;
+	unsigned int csc_gb;
+	unsigned int csc_br;
+	unsigned int csc_bg;
+	unsigned int csc_bb;
+};
+
 void iftu_crtc_enable(int crtc);
-void iftu_set_plane(int plane, struct iftu_plane_info *info);
+void iftu_init_plane(int plane);
+void iftu_set_source_fb(int plane, struct iftu_plane_source_fb_info *info);
+void iftu_set_dst_conversion(int plane, unsigned int dst_width, unsigned int dst_height,
+	unsigned int dst_pixelformat, unsigned int unk44);
+void iftu_set_csc1(int plane, const struct iftu_csc_params *csc);
+void iftu_set_csc2(int plane, const struct iftu_csc_params *csc);
+void iftu_set_control_value(int plane, int value);
+void iftu_set_alpha(int plane, unsigned int alpha);
 
 #endif

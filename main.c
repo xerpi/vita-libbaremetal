@@ -81,53 +81,72 @@ int main(void)
 	spi_init(0);
 	syscon_init();
 
+	static const struct iftu_csc_params csc1_plane2 = {0, 0, 0x3FF, 0,    0,     0,    0x254, 0, 0x395, 0x254, 0xF93, 0xEF0, 0x254, 0x439, 0};
+	static const struct iftu_csc_params csc1_plane3 = {0x40, 0x202, 0x3FF, 0,    0,     0,    0x254, 0, 0x395, 0x254, 0xF93, 0xEF0, 0x254, 0x439, 0};
+	static const struct iftu_csc_params csc2 = {0x40, 0x40,  0x3AC, 0x40, 0x3AC, 0x40, 0x1B7, 0, 0,     0,     0x1B7, 0,     0,     0,     0x1B7};
+
+	iftu_set_csc1(2, &csc1_plane2);
+	iftu_set_csc1(3, &csc1_plane3);
+	iftu_set_csc2(2, &csc2);
+	iftu_set_csc2(3, &csc2);
+	iftu_set_control_value(3, 4);
+	iftu_set_alpha(2, 0);
+	iftu_set_alpha(3, 0xFF);
+
+	static struct iftu_plane_source_fb_info plane_fb = {
+		.pixelformat = 0x10, // A8B8G8R8
+		.width = 1080,
+		.height = 720,
+		.leftover_stride = 0,
+		.unk10 = 0, // always 0
+		.paddr = 0x21000000,
+		.unk18 = 0, // always 0
+		.unk1C = 0, // always 0
+		.unk20 = 0, // always 0
+		.src_x = 0, // in (0x10000 / 960) multiples
+		.src_y = 0, // in (0x10000 / 544) multiples
+		.src_w = 0x10000, // in (0x10000 / 960) multiples
+		.src_h = 0x10000, // in (0x10000 / 544) multiples
+		.dst_x = 0,
+		.dst_y = 0,
+		.dst_w = 1080,
+		.dst_h = 720,
+		.vfront_porch = 0,
+		.vback_porch = 0,
+		.hfront_porch = 0,
+		.hback_porch = 0,
+	};
+
+	memset((void *)0x21000000, 0xFF, 1080*720*4);
+
+	//iftu_set_plane(0, &plane_fb);
+	//iftu_set_plane(1, &plane_fb);
+	iftu_set_source_fb(2, &plane_fb);
+	iftu_set_source_fb(3, &plane_fb);
+	iftu_crtc_enable(1);
+
+	delay(1000);
+
 	pervasive_dsi_set_pixelclock(1, 0x2D45F9);
 	pervasive_clock_enable_dsi(1, 0xF);
 	pervasive_reset_exit_dsi(1, 7);
 
 	dsi_init();
-	dsi_enable_bus(1);
+	dsi_enable_bus(1, 0x8600);
 
-	static struct iftu_plane_info plane = {
-		.pixelformat = 0x10, // A8B8G8R8
-		.width = 960,
-		.height = 544,
-		.leftover_stride = 0,
-		.unk10 = 0, // always 0
-		.paddr = 0x40200000,
-		.unk18 = 0, // always 0
-		.unk1C = 0, // always 0
-		.unk20 = 0, // always 0
-		.src_x = 0, // in (0x100000 / 960) multiples
-		.src_y = 0, // in (0x100000 / 544) multiples
-		.src_w = 0x100000, // in (0x100000 / 960) multiples
-		.src_h = 0x100000, // in (0x100000 / 544) multiples
-		.dst_x = 0,
-		.dst_y = 0,
-		.dst_w = 960,
-		.dst_h = 544,
-		.vfront_porch = 0x2C,
-		.vback_porch = 0x210,
-		.hfront_porch = 4,
-		.hback_porch = 5,
-	};
+	//iftu_set_dst_conversion(2, 1080, 720, 0);
+	//iftu_set_dst_conversion(3, 1080, 720, 0);
+	iftu_init_plane(2);
+	iftu_init_plane(3);
 
-	iftu_set_plane(0, &plane);
-	iftu_set_plane(1, &plane);
-	iftu_set_plane(2, &plane);
-	iftu_set_plane(3, &plane);
-
-	iftu_crtc_enable(1);
-
-	delay(1000);
-	LOG("Before!");
-	dsi_unk(1, 0);
-	LOG("After!");
+	dsi_unk(1, 0x8600, 0);
 
 	hdmi_init();
 
 	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
 	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
+
+	LOG("Init done!");
 
 	while (1) {
 		static unsigned int i = 0;
