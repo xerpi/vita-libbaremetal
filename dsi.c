@@ -185,7 +185,7 @@ void dsi_enable_bus(int bus, unsigned int vic)
 		dsi_regs[0x20A] = subinfo->subsubinfo.unk08;
 		dsi_regs[0x20B] = subinfo->subsubinfo.unk0C;
 		dsi_regs[0x20C] = subinfo->subsubinfo.unk10;
-		dsi_regs[0x20F] = subinfo->unk04 | (subinfo->unk04 << 0x10);
+		dsi_regs[0x20F] = subinfo->unk04 | (subinfo->unk04 << 16);
 	}
 
 	unsigned int flags = timing_info->flags;
@@ -210,7 +210,7 @@ void dsi_enable_bus(int bus, unsigned int vic)
 				v82 -= 2;
 
 			unsigned int v86 = timing_info->vtotal - 2 - VSW - VBP - VFP;
-			unsigned int v89 = (0x300 * v82) & 0xFFFFFF;
+			unsigned int v89 = (768 * v82) & 0xFFFFFF;
 
 			if (lanes == 3)
 				v81 = 0xA30000A4;
@@ -249,72 +249,71 @@ void dsi_enable_bus(int bus, unsigned int vic)
 				unsigned int v64 = timing_info->flags & 4;
 				unsigned int v65;
 				unsigned int v70;
-				unsigned int v98;
+				unsigned int v98 = (v61 - 1) | 0x4050000;
 
 				if (v63)
 					v63 = pixel_size * HSW;
 				if (timing_info->flags & 2)
-					v63 = ((v63 >> 3) - 0xA) | 0x80000000;
+					v63 = ((v63 >> 3) - 10) | 0x80000000;
 
 				if (v64)
 					v64 = pixel_size * HBP;
 
 				if (timing_info->flags & 4)
-					v64 = ((v64 >> 3) - 0xA) | 0x80000000;
+					v64 = ((v64 >> 3) - 10) | 0x80000000;
 
 				if (lanes == 3)
 					v65 = 0xA30000A4;
 				else
 					v65 = 0xA30000A2;
-				packet[2] = v65;
 				packet[1] = 0x415FFFF;
+				packet[2] = v65;
 				packet[3] = 0x28800005;
 				packet[4] = 0x10000081;
 				if (v63) {
-					v98 = (v61 - 1) | 0x4050000;
-					packet[0x15] = (v61 - 1) | 0x4050000;
 					packet[5] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+					packet[6] = 0x100000B1;
+					packet[7] = (VSW - 2) | 0x4030000;
+					packet[8] = 0x28000001;
+					packet[9] = 0x100000A1;
 					packet[0xA] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+					packet[0xB] = 0x100000B1;
+					packet[0xC] = 0x28000008;
+					packet[0xD] = 0x10000091;
 					packet[0xE] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+					packet[0xF] = 0x100000B1;
+					packet[0x10] = (VBP - 3) | 0x4030000;
+					packet[0x11] = 0x28000001;
+					packet[0x12] = 0x100000A1;
 					packet[0x13] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x18] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[6] = 0x100000B1;
-					packet[0xB] = 0x100000B1;
-					packet[0xF] = 0x100000B1;
 					packet[0x14] = 0x100000B1;
-					packet[0x10] = (VBP - 3) | 0x4030000;
-					packet[8] = 0x28000001;
-					packet[0x11] = 0x28000001;
-					packet[0x16] = 0x28000001;
-					packet[9] = 0x100000A1;
-					packet[0x12] = 0x100000A1;
-					packet[0x17] = 0x100000A1;
-					packet[0xC] = 0x28000008;
-					packet[0xD] = 0x10000091;
-				} else {
-					v98 = (v61 - 1) | 0x4050000;
 					packet[0x15] = (v61 - 1) | 0x4050000;
-					packet[0x10] = (VBP - 3) | 0x4030000;
-					packet[5] = 0x28000002;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[0xA] = 0x28000002;
-					packet[0xE] = 0x28000002;
-					packet[0x13] = 0x28000002;
-					packet[0x18] = 0x28000002;
-					packet[6] = 0x100000B1;
-					packet[0xB] = 0x100000B1;
-					packet[0xF] = 0x100000B1;
-					packet[0x14] = 0x100000B1;
-					packet[8] = 0x28000001;
-					packet[0x11] = 0x28000001;
 					packet[0x16] = 0x28000001;
-					packet[9] = 0x100000A1;
-					packet[0x12] = 0x100000A1;
 					packet[0x17] = 0x100000A1;
+					packet[0x18] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+				} else {
+					packet[5] = 0x28000002;
+					packet[6] = 0x100000B1;
+					packet[7] = (VSW - 2) | 0x4030000;
+					packet[8] = 0x28000001;
+					packet[9] = 0x100000A1;
+					packet[0xA] = 0x28000002;
+					packet[0xB] = 0x100000B1;
 					packet[0xC] = 0x28000008;
 					packet[0xD] = 0x10000091;
+					packet[0xE] = 0x28000002;
+					packet[0xF] = 0x100000B1;
+					packet[0x10] = (VBP - 3) | 0x4030000;
+					packet[0x11] = 0x28000001;
+					packet[0x12] = 0x100000A1;
+					packet[0x13] = 0x28000002;
+					packet[0x14] = 0x100000B1;
+					packet[0x15] = (v61 - 1) | 0x4050000;
+					packet[0x16] = 0x28000001;
+					packet[0x17] = 0x100000A1;
+					packet[0x18] = 0x28000002;
 				}
+
 				packet[0x19] = 0x100000B1;
 
 				unsigned int v66 = 0x28000010;
@@ -323,10 +322,10 @@ void dsi_enable_bus(int bus, unsigned int vic)
 				packet[0x1A] = v66;
 
 				unsigned int v67;
-				if (pixel_size == 0x18)
-					v67 = ((0x300 * v62) & 0xFFFFFF) | 0x400000BE;
+				if (pixel_size == 24)
+					v67 = ((768 * v62) & 0xFFFFFF) | 0x400000BE;
 				else
-					v67 = ((0x3C0 * v62) & 0xFFFF00) | 0x400000A9;
+					v67 = ((960 * v62) & 0xFFFF00) | 0x400000A9;
 
 				packet[0x1B] = v67;
 				packet[0x1C] = VFP | 0x4030000;
@@ -334,47 +333,47 @@ void dsi_enable_bus(int bus, unsigned int vic)
 				packet[0x1E] = 0x100000A1;
 
 				if (v63) {
-					packet[0x24] = 0x28000001;
-					packet[0x25] = 0x100000A1;
-					packet[0x2B] = 0x28000001;
-					packet[0x2C] = 0x100000A1;
-					packet[0x23] = (VSW - 1) | 0x4030000;
-					packet[0x2A] = (VBP - 2) | 0x4030000;
-					packet[0x2F] = v98;
-					packet[0x30] = 0x28000001;
-					packet[0x31] = 0x100000A1;
 					packet[0x1F] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x26] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x2D] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x32] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
 					packet[0x20] = 0x100000B1;
-					packet[0x27] = 0x100000B1;
-					packet[0x2E] = 0x100000B1;
 					packet[0x21] = 0x28000004;
 					packet[0x22] = 0x100000C1;
-					packet[0x28] = 0x28000008;
-					packet[0x29] = 0x100000D1;
-				} else {
+					packet[0x23] = (VSW - 1) | 0x4030000;
 					packet[0x24] = 0x28000001;
 					packet[0x25] = 0x100000A1;
+					packet[0x26] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+					packet[0x27] = 0x100000B1;
+					packet[0x28] = 0x28000008;
+					packet[0x29] = 0x100000D1;
+					packet[0x2A] = (VBP - 2) | 0x4030000;
 					packet[0x2B] = 0x28000001;
 					packet[0x2C] = 0x100000A1;
-					packet[0x23] = (VSW - 1) | 0x4030000;
-					packet[0x2A] = (VBP - 2) | 0x4030000;
+					packet[0x2D] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+					packet[0x2E] = 0x100000B1;
 					packet[0x2F] = v98;
 					packet[0x30] = 0x28000001;
 					packet[0x31] = 0x100000A1;
+					packet[0x32] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
+				} else {
 					packet[0x1F] = 0x28000002;
-					packet[0x26] = 0x28000002;
-					packet[0x2D] = 0x28000002;
-					packet[0x32] = 0x28000002;
 					packet[0x20] = 0x100000B1;
-					packet[0x27] = 0x100000B1;
-					packet[0x2E] = 0x100000B1;
 					packet[0x21] = 0x28000004;
 					packet[0x22] = 0x100000C1;
+					packet[0x23] = (VSW - 1) | 0x4030000;
+					packet[0x24] = 0x28000001;
+					packet[0x25] = 0x100000A1;
+					packet[0x26] = 0x28000002;
+					packet[0x27] = 0x100000B1;
 					packet[0x28] = 0x28000008;
 					packet[0x29] = 0x100000D1;
+					packet[0x2A] = (VBP - 2) | 0x4030000;
+					packet[0x2B] = 0x28000001;
+					packet[0x2C] = 0x100000A1;
+					packet[0x2D] = 0x28000002;
+					packet[0x2E] = 0x100000B1;
+					packet[0x2F] = v98;
+					packet[0x30] = 0x28000001;
+					packet[0x31] = 0x100000A1;
+					packet[0x32] = 0x28000002;
 				}
 
 				packet[0x33] = 0x100000B1;
@@ -385,10 +384,10 @@ void dsi_enable_bus(int bus, unsigned int vic)
 
 				packet[0x34] = v69;
 
-				if (pixel_size == 0x18)
-					v70 = ((0x300 * v62) & 0xFFFFFF) | 0x400000BE;
+				if (pixel_size == 24)
+					v70 = ((768 * v62) & 0xFFFFFF) | 0x400000BE;
 				else
-					v70 = ((0x3C0 * v62) & 0xFFFF00) | 0x400000A9;
+					v70 = ((960 * v62) & 0xFFFF00) | 0x400000A9;
 
 				packet[0x35] = v70;
 				packet[0x36] = (VFP - 1) | 0x4030000;
@@ -464,36 +463,36 @@ void dsi_enable_bus(int bus, unsigned int vic)
 				packet[4] = 0x10000001;
 				if (v42) {
 					packet[5] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[0x10] = (VBP - 2) | 0x4030000;
-					packet[0xA] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0xE] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x13] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
 					packet[6] = 0x10000031;
-					packet[0xB] = 0x10000031;
-					packet[0xF] = 0x10000031;
+					packet[7] = (VSW - 2) | 0x4030000;
 					packet[8] = 0x28000001;
-					packet[0x11] = 0x28000001;
 					packet[9] = 0x10000021;
-					packet[0x12] = 0x10000021;
+					packet[0xA] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
+					packet[0xB] = 0x10000031;
 					packet[0xC] = 0x28000008;
 					packet[0xD] = 0x10000011;
+					packet[0xE] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
+					packet[0xF] = 0x10000031;
+					packet[0x10] = (VBP - 2) | 0x4030000;
+					packet[0x11] = 0x28000001;
+					packet[0x12] = 0x10000021;
+					packet[0x13] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
 				} else {
 					packet[5] = 0x28000002;
-					packet[0xA] = 0x28000002;
-					packet[0xE] = 0x28000002;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[0x10] = (VBP - 2) | 0x4030000;
-					packet[0x13] = 0x28000002;
 					packet[6] = 0x10000031;
-					packet[0xB] = 0x10000031;
-					packet[0xF] = 0x10000031;
+					packet[7] = (VSW - 2) | 0x4030000;
 					packet[8] = 0x28000001;
-					packet[0x11] = 0x28000001;
 					packet[9] = 0x10000021;
-					packet[0x12] = 0x10000021;
+					packet[0xA] = 0x28000002;
+					packet[0xB] = 0x10000031;
 					packet[0xC] = 0x28000008;
 					packet[0xD] = 0x10000011;
+					packet[0xE] = 0x28000002;
+					packet[0xF] = 0x10000031;
+					packet[0x10] = (VBP - 2) | 0x4030000;
+					packet[0x11] = 0x28000001;
+					packet[0x12] = 0x10000021;
+					packet[0x13] = 0x28000002;
 				}
 				packet[0x14] = 0x10000031;
 				if (v45) {
@@ -513,10 +512,10 @@ void dsi_enable_bus(int bus, unsigned int vic)
 					packet[0x19] = v76;
 
 					unsigned int v77;
-					if (pixel_size == 0x18)
-						v77 = ((0x300 * v44) & 0xFFFFFF) | 0x4000003E;
+					if (pixel_size == 24)
+						v77 = ((768 * v44) & 0xFFFFFF) | 0x4000003E;
 					else
-						v77 = ((0x3C0 * v44) & 0xFFFF00) | 0x40000029;
+						v77 = ((960 * v44) & 0xFFFF00) | 0x40000029;
 					packet[0x1A] = v77;
 
 					packet[0x1B] = ((v45 << 8) & 0xFFFFFF) | 0x40000019;
@@ -538,29 +537,29 @@ void dsi_enable_bus(int bus, unsigned int vic)
 					packet[0x20] = v79;
 
 					unsigned int v80;
-					if (pixel_size == 0x18)
-						v80 = ((0x300 * v44) & 0xFFFFFF) | 0x4000003E;
+					if (pixel_size == 24)
+						v80 = ((768 * v44) & 0xFFFFFF) | 0x4000003E;
 					else
-						v80 = ((0x3C0 * v44) & 0xFFFF00) | 0x40000029;
+						v80 = ((960 * v44) & 0xFFFF00) | 0x40000029;
 					packet[0x21] = v80;
 
 					packet[0x22] = ((v45 << 8) & 0xFFFFFF) | 0x40000019;
 					packet[0x23] = 0x10000021;
 
 					if (v42) {
-						packet[0x28] = 0x10000021;
 						packet[0x24] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-						packet[0x29] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
 						packet[0x25] = 0x10000031;
 						packet[0x26] = (VFP - 2) | 0x4030000;
 						packet[0x27] = 0x28000001;
-					} else {
 						packet[0x28] = 0x10000021;
+						packet[0x29] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
+					} else {
 						packet[0x24] = 0x28000002;
-						packet[0x29] = 0x28000002;
 						packet[0x25] = 0x10000031;
 						packet[0x26] = (VFP - 2) | 0x4030000;
 						packet[0x27] = 0x28000001;
+						packet[0x28] = 0x10000021;
+						packet[0x29] = 0x28000002;
 					}
 					packet[0x2A] = 0x10000031;
 
@@ -583,10 +582,10 @@ void dsi_enable_bus(int bus, unsigned int vic)
 					packet[0x1A] = v54;
 
 					unsigned int v55;
-					if (pixel_size == 0x18)
-						v55 = ((0x300 * v44) & 0xFFFFFF) | 0x4000003E;
+					if (pixel_size == 24)
+						v55 = ((768 * v44) & 0xFFFFFF) | 0x4000003E;
 					else
-						v55 = ((0x3C0 * v44) & 0xFFFF00) | 0x40000029;
+						v55 = ((960 * v44) & 0xFFFF00) | 0x40000029;
 					packet[0x1B] = v55;
 
 					packet[0x1C] = (VFP - 1) | 0x4030000;
@@ -639,8 +638,8 @@ void dsi_enable_bus(int bus, unsigned int vic)
 		packet[0xA] = ((vtotal - 1) - VSW - VBP - VFP) | 0x4030000;
 		packet[0xB] = 0x28000001;
 		packet[0xC] = 0x10000021;
-		packet[0xD] = ((0x300 * HBP - 0xA00) & 0xFFFFFF) | 0x40000019;
-		packet[0xE] = ((0x300 * (horizontal_pixels - HBP)) & 0xFFFFFF) | 0x4000003E;
+		packet[0xD] = ((768 * HBP - 0xA00) & 0xFFFFFF) | 0x40000019;
+		packet[0xE] = ((768 * (horizontal_pixels - HBP)) & 0xFFFFFF) | 0x4000003E;
 		packet[0xF] = (VFP - 1) | 0x4020000;
 		packet[0x10] = 0x28000001;
 		packet[0x11] = 0x10000021;
@@ -663,12 +662,12 @@ LABEL_18:
 	dsi_regs[0x147] = 1;
 }
 
-void dsi_unk(int bus, unsigned int vic, int unk)
+void dsi_unk(int bus, unsigned int vic, unsigned int unk)
 {
 	static const unsigned int bus_index = 1;
 	static const unsigned int lanes = 3;
 	static const unsigned int pixel_size = 24;
-	static const unsigned int intr_mask = 0;
+	static const unsigned int intr_mask = 2;
 
 	static const unsigned int lookup[] = {2, 2, 3, 4};
 
@@ -688,7 +687,7 @@ void dsi_unk(int bus, unsigned int vic, int unk)
 
 	unsigned int hsync_end = HBP + HSW;
 	unsigned int hact = htotal - (HBP + HSW) - HFP;
-	if (flags & 3)
+	if (flags & (1 << 3))
 		hact -= 2;
 
 	if (mode == 1)
@@ -724,7 +723,7 @@ void dsi_unk(int bus, unsigned int vic, int unk)
 		dsi_regs[5] = (((hsync_end * v15) >> 1) << 16) | (((v36 >> 1) + 1) & 0xFFFF);
 		dsi_regs[7] = (((VBP + VSW - 1) << 16) & 0x1FFF0000) | ((v21 - VFP) & 0x1FFF);
 		dsi_regs[8] = (((VBP + VSW + ((vtotal - 1) >> 1)) << 16) & 0x1FFF0000) | ((vtotal + 1 - VFP) & 0x1FFF);
-		dsi_regs[9] = ((HSW_clocks >> 1) << 0x10) | 1;
+		dsi_regs[9] = ((HSW_clocks >> 1) << 16) | 1;
 		dsi_regs[0xB] = 0x10001;
 		dsi_regs[0xC] = ((VSW << 16) & 0x1FFF0000) | (htotal_clocks & 0xFFFF);
 		dsi_regs[0xD] = ((v21 << 16) & 0x1FFF0000) | (v37 + 1);
@@ -737,7 +736,7 @@ void dsi_unk(int bus, unsigned int vic, int unk)
 		dsi_regs[4] = 0x10001;
 		dsi_regs[5] = (((HBP + HSW) * v15) >> 1 << 16) | ((((HFP_start * v15) >> 1) + 1) & 0xFFFF);
 		dsi_regs[7] = (((VBP + VSW) << 16) & 0x1FFF0000) | ((vtotal + 1 - VFP) & 0x1FFF);
-		dsi_regs[9] = (HSW_clocks >> 1 << 0x10) | 1;
+		dsi_regs[9] = ((HSW_clocks >> 1) << 16) | 1;
 		dsi_regs[0xB] = 0x10001;
 		dsi_regs[0xC] = ((VSW << 16) & 0x1FFF0000) | htotal_clocks;
 	}
@@ -784,9 +783,8 @@ void dsi_unk(int bus, unsigned int vic, int unk)
 		dsi_regs[0x1C] = 0;
 	}
 
-	unsigned int intr = intr_mask;
 	dsi_regs[0x14] = dsi_regs[0x14];
-	dsi_regs[0x15] = intr;
+	dsi_regs[0x15] = intr_mask;
 	if (bus_index)
 		dsi_regs[0x20E] = 1;
 	else
@@ -800,8 +798,8 @@ void dsi_unk(int bus, unsigned int vic, int unk)
 
 	dsi_regs[0x142] = 0xFFFFFFFF;
 
-	unsigned int v31;
-	if (v30 || (unk - 1 > 3) || ((unk == 2 ? (v31 = bus & 1) : (v31 = 0)), v31))
+	unsigned int v31 = (unk == 2) ? (bus & 1) : 0;
+	if (v30 || v31 || (unk - 1 > 3))
 		dsi_regs[0] = 1;
 	else
 		dsi_regs[0] = lookup[unk - 1];
