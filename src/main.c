@@ -9,6 +9,7 @@
 #include "display.h"
 #include "ctrl.h"
 #include "draw.h"
+#include "font.h"
 #include "utils.h"
 #include "log.h"
 
@@ -48,8 +49,9 @@ int main(void)
 
 	display_init(IFTU_BUS_HDMI);
 
-	draw_fill_screen(YELLOW);
+	draw_fill_screen(BLACK);
 	draw_rectangle(50, 50, 100, 100, BLUE);
+	font_draw_string(10, 10, WHITE, "Hello world from baremetal!");
 
 	dsi_unk(1, 0x8600, 0);
 

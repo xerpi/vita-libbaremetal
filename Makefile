@@ -2,7 +2,8 @@ TARGET	= baremetal-sample
 SRCDIR	= src
 INCDIR	= include
 OBJS	= start.o main.o libc.o utils.o pervasive.o cdram.o uart.o gpio.o \
-	  i2c.o iftu.o dsi.o display.o spi.o syscon.o hdmi.o ctrl.o draw.o
+	  i2c.o iftu.o dsi.o display.o spi.o syscon.o hdmi.o ctrl.o draw.o \
+	  font.o font_data.o
 
 PREFIX	= arm-vita-eabi
 CC	= $(PREFIX)-gcc
