@@ -16,6 +16,7 @@ static void syscon_packet_start(struct syscon_packet *packet)
 	unsigned char cmd_size = packet->tx[2];
 	unsigned char tx_total_size = cmd_size + 3;
 	unsigned int offset;
+	(void)offset;
 
 	gpio_port_clear(0, 3);
 	spi_write_start(0);
@@ -23,13 +24,11 @@ static void syscon_packet_start(struct syscon_packet *packet)
 	if (cmd_size <= 29) {
 		offset = 2;
 	} else {
-
+		/* TODO */
 	}
 
 	do {
-		unsigned char data0 = packet->tx[i];
-		unsigned char data1 = packet->tx[i + 1];
-		spi_write(0, data0 | (data1 << 8));
+		spi_write(0, (packet->tx[i + 1] << 8) | packet->tx[i]);
 		i += 2;
 	} while (i < tx_total_size);
 
@@ -46,7 +45,7 @@ static void syscon_cmd_sync(struct syscon_packet *packet)
 
 	gpio_acquire_intr(0, 4);
 
-	while (spi_read_avaiable(0)) {
+	while (spi_read_available(0)) {
 		unsigned int data = spi_read(0);
 		packet->rx[i] = data & 0xFF;
 		packet->rx[i + 1] = (data >> 8) & 0xFF;
@@ -111,7 +110,23 @@ int syscon_init(void)
 	return 0;
 }
 
+void syscon_reset_device(int type, int unk)
+{
+	asm volatile(
+		"mov r0, %0\n\t"
+		"mov r1, %0\n\t"
+		"ldr r12, =0x11A\n\t"
+		"smc #0\n\t"
+		: : "r"(type), "r"(unk) : "r12"
+	);
+}
+
 void syscon_set_hdmi_cdc_hpd(int enable)
 {
 	syscon_common_write(enable, 0x886, 2);
+}
+
+void syscon_ctrl_read(unsigned int *data)
+{
+	syscon_common_read(data, 0x101); // or 0x104
 }

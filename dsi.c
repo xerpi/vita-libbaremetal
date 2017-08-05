@@ -4,10 +4,8 @@
 #include "libc.h"
 #include "utils.h"
 
-#define DSI0_BASE_ADDR			0xE5050000
-#define DSI1_BASE_ADDR			0xE5060000
-
-#define DSI_REGS(i)			((void *)((i) == 0 ? DSI0_BASE_ADDR : DSI1_BASE_ADDR))
+#define DSI_BASE_ADDR	0xE5050000
+#define DSI_REGS(i)	((void *)(DSI_BASE_ADDR + (i) * 0x10000))
 
 struct dsi_timing_subsubinfo {
 	unsigned int unk00;
@@ -26,13 +24,13 @@ struct dsi_timing_subinfo {
 };
 
 struct dsi_timing_info {
-	unsigned int flags; // bit 3 = enable CRC?
+	unsigned int flags;
 	unsigned int pixelclock_24bpp;
 	const struct dsi_timing_subinfo *subinfo_24bpp;
 	unsigned int pixelclock_30bpp;
 	const struct dsi_timing_subinfo *subinfo_30bpp;
-	unsigned int htotal; // horizontal line time
-	unsigned int vtotal; // vertical line time
+	unsigned int htotal;
+	unsigned int vtotal;
 	unsigned int mode; // 1 = interlaced, 0 = progressive
 	unsigned int HFP;
 	unsigned int HSW;
@@ -68,7 +66,7 @@ static const struct dsi_timing_info stru_BD0DCC = {1,   0x107AC0, &stru_BD0E04, 
 static const struct dsi_timing_info stru_BD0B90 = {1,   0x107AC0, &stru_BD0E04, 0x149970, &stru_BD0AC4, 0x360, 0x272, 0, 0xC,   0x40,  0x44, 6,   5, 0x28};
 static const struct dsi_timing_info stru_BD0CB8 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x898, 0x465, 1, 0x58,  0x2C,  0x94, 2,   5, 0x10};
 static const struct dsi_timing_info stru_BD0B58 = {0,   0x2D5190, &stru_BD0B34, 0x38A5F4, &stru_BD0D4C, 0xA50, 0x465, 1, 0x210, 0x2C,  0x94, 2,   5, 0x10};
-static const struct dsi_timing_info stru_BD0F68 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x672, 0x2EE, 0, 0x6E,  0x28,  0xDC, 5,   5, 0x14};
+static const struct dsi_timing_info stru_BD0F68 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x672, 0x2EE, 0, 0x6E,  0x28,  0xDC, 5,   5, 0x14}; // VIC 4
 static const struct dsi_timing_info stru_BD0D70 = {0,   0x2D5190, &stru_BD0B34, 0x38A5F4, &stru_BD0D4C, 0x7BC, 0x2EE, 0, 0x1B8, 0x28,  0xDC, 5,   5, 0x14};
 static const struct dsi_timing_info stru_BD0C80 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x898, 0x465, 0, 0x58,  0x2C,  0x94, 4,   5, 0x24};
 static const struct dsi_timing_info stru_BD0A8C = {0,   0x2D5190, &stru_BD0B34, 0x38A5F4, &stru_BD0D4C, 0xA50, 0x465, 0, 0x210, 0x2C,  0x94, 4,   5, 0x24};
@@ -734,7 +732,7 @@ void dsi_unk(int bus, unsigned int vic, unsigned int unk)
 
 		dsi_regs[3] = vtotal;
 		dsi_regs[4] = 0x10001;
-		dsi_regs[5] = (((HBP + HSW) * v15) >> 1 << 16) | ((((HFP_start * v15) >> 1) + 1) & 0xFFFF);
+		dsi_regs[5] = ((((HBP + HSW) * v15) >> 1) << 16) | ((((HFP_start * v15) >> 1) + 1) & 0xFFFF);
 		dsi_regs[7] = (((VBP + VSW) << 16) & 0x1FFF0000) | ((vtotal + 1 - VFP) & 0x1FFF);
 		dsi_regs[9] = ((HSW_clocks >> 1) << 16) | 1;
 		dsi_regs[0xB] = 0x10001;
@@ -767,8 +765,8 @@ void dsi_unk(int bus, unsigned int vic, unsigned int unk)
 	}
 
 	dsi_regs[0xF] = 1;
-	unsigned int vsync_start = VBP + VSW;
-	dsi_regs[0x10] = (((v21 + vsync_start - 8) << 16) & 0x1FFF0000) | ((vsync_start - 8) & 0x1FFF);
+	unsigned int vact_start = VBP + VSW;
+	dsi_regs[0x10] = (((v21 + vact_start - 8) << 16) & 0x1FFF0000) | ((vact_start - 8) & 0x1FFF);
 	if (mode == 1) {
 		dsi_regs[0x17] = ((v21 << 16) & 0x1FFF0000) | 1;
 		dsi_regs[0x18] = (((VBP + VSW + ((vtotal - 1) >> 1)) << 16) & 0x1FFF0000) | 1;

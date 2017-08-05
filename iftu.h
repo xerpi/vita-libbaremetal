@@ -1,28 +1,13 @@
 #ifndef IFTU_H
 #define IFTU_H
 
-struct iftu_plane_source_fb_info {
+#define IFTU_FB_PIXELFORMAT_A8B8G8R8	0x10
+
+struct iftu_plane_fb_config {
+	unsigned int paddr;
 	unsigned int pixelformat;
 	unsigned int width;
 	unsigned int height;
-	unsigned int leftover_stride;
-	unsigned int unk10; // always 0
-	unsigned int paddr;
-	unsigned int unk18; // always 0
-	unsigned int unk1C; // always 0
-	unsigned int unk20; // always 0
-	unsigned int src_x; // in (0x100000 / 960) multiples
-	unsigned int src_y; // in (0x100000 / 544) multiples
-	unsigned int src_w; // in (0x100000 / 960) multiples
-	unsigned int src_h; // in (0x100000 / 544) multiples
-	unsigned int dst_x;
-	unsigned int dst_y;
-	unsigned int dst_w;
-	unsigned int dst_h;
-	unsigned int vfront_porch;
-	unsigned int vback_porch;
-	unsigned int hfront_porch;
-	unsigned int hback_porch;
 };
 
 struct iftu_csc_params {
@@ -43,14 +28,15 @@ struct iftu_csc_params {
 	unsigned int csc_bb;
 };
 
-void iftu_crtc_enable(int crtc);
-void iftu_init_plane(int plane);
-void iftu_set_source_fb(int plane, struct iftu_plane_source_fb_info *info);
-void iftu_set_dst_conversion(int plane, unsigned int dst_width, unsigned int dst_height,
-	unsigned int dst_pixelformat, unsigned int unk44);
-void iftu_set_csc1(int plane, const struct iftu_csc_params *csc);
-void iftu_set_csc2(int plane, const struct iftu_csc_params *csc);
-void iftu_set_control_value(int plane, int value);
-void iftu_set_alpha(int plane, unsigned int alpha);
+void iftu_bus_enable(int bus);
+void iftu_bus_plane_config_select(int bus, int plane, int config);
+void iftu_bus_alpha_blending_control(int bus, int ctrl);
+
+void iftu_plane_set_alpha(int bus, int plane, unsigned int alpha);
+void iftu_plane_set_csc_enabled(int bus, int plane, int enabled);
+void iftu_plane_set_csc0(int bus, int plane, const struct iftu_csc_params *csc);
+void iftu_plane_set_csc1(int bus, int plane, const struct iftu_csc_params *csc);
+
+void iftu_plane_set_fb_config(int bus, int plane, int config, struct iftu_plane_fb_config *cfg);
 
 #endif

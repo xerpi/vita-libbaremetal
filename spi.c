@@ -51,7 +51,7 @@ void spi_write(int bus, unsigned int data)
 	spi_regs[1] = data;
 }
 
-int spi_read_avaiable(int bus)
+int spi_read_available(int bus)
 {
 	volatile unsigned int *spi_regs = SPI_REGS(bus);
 

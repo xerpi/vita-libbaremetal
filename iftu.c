@@ -1,181 +1,180 @@
 #include "iftu.h"
 #include "utils.h"
 
-#define IFTU0REGA_BASE_ADDR		0xE5020000
-#define IFTU0REGB_BASE_ADDR		0xE5021000
-#define IFTU0CREG_BASE_ADDR		0xE5022000
-#define IFTU1REGA_BASE_ADDR		0xE5030000
-#define IFTU1REGB_BASE_ADDR		0xE5031000
-#define IFTU1CREG_BASE_ADDR		0xE5032000
+#define IFTUREG_BASE_ADDR			0xE5020000
+#define IFTUCREG_BASE_ADDR			0xE5022000
 
-#define IFTU_REGS(i)			((void *)( \
-						(i) == 0 ? IFTU0REGA_BASE_ADDR : \
-						(i) == 1 ? IFTU0REGB_BASE_ADDR : \
-						(i) == 2 ? IFTU1REGA_BASE_ADDR : \
-						           IFTU1REGB_BASE_ADDR))
+#define IFTU_CREGS(bus)				((void *)IFTUCREG_BASE_ADDR + (bus) * 0x10000)
 
-#define IFTU_CREGS(i) ((void *)(((i) & 1) == 0 ? IFTU0CREG_BASE_ADDR : IFTU1CREG_BASE_ADDR))
+#define IFTU_CREG_CONTROL			0x00
+#define IFTU_CREG_CONTROL_ENABLE		BIT(0)
 
-static const struct iftu_csc_params csc_identity_matrix_C01724 = {0,    0,     0x3FF, 0,    0x3FF, 0,    0x200, 0, 0,     0,     0x200, 0,     0,     0,     0x200};
-static const struct iftu_csc_params csc_identity_matrix_C019AC = {0,    0,     0x3FF, 0,    0x3FF, 0,    0x200, 0, 0,     0,     0x200, 0,     0,     0,     0x200};
-static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0177C   = {0x40, 0x202, 0x3FF, 0,    0,     0,    0x254, 0, 0x395, 0x254, 0xF93, 0xEF0, 0x254, 0x439, 0};
-static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0180C   = {0x40, 0x202, 0x3FF, 0,    0,     0,    0x254, 0, 0x395, 0x254, 0xF93, 0xEF0, 0x254, 0x439, 0};
-static const struct iftu_csc_params YPbPr_to_RGB_HDTV_C017D0   = {0,    0x202, 0x3FF, 0,    0,     0,    0x200, 0, 0x326, 0x200, 0xFA1, 0xF11, 0x200, 0x3B6, 0};
-static const struct iftu_csc_params stru_C01970                = {0x40, 0x40,  0x3AC, 0x40, 0x3AC, 0x40, 0x1B7, 0, 0,     0,     0x1B7, 0,     0,     0,     0x1B7};
+#define IFTU_CREG_CONTROL2			0x04
+#define IFTU_CREG_CONTROL2_ALPHA_EN		BIT(0)
 
-void iftu_crtc_enable(int crtc)
+#define IFTU_CREG_PLANE_CONFIG_BASE(i)		(0x10 + (i) * 0x10)
+#define IFTU_CREG_PLANE_CONFIG_SELECT		0x00
+
+#define IFTU_CREG_ALPHA_BLENDING_CONTROL	0x20
+
+#define IFTU_PLANE_REGS(bus, plane)		((void *)IFTUREG_BASE_ADDR + (bus) * 0x10000 + (plane) * 0x1000)
+
+#define IFTU_PLANE_ALPHA_VALUE			0x08C
+#define IFTU_PLANE_ALPHA_CONTROL		0x0A0
+#define IFTU_PLANE_CSC_CONTROL			0x100
+#define IFTU_PLANE_CSC_UNK_104			0x104
+#define IFTU_PLANE_CSC_UNK_108			0x108
+#define IFTU_PLANE_CSC_RR_0			0x10C
+#define IFTU_PLANE_CSC_RG_0			0x110
+#define IFTU_PLANE_CSC_RB_0			0x114
+#define IFTU_PLANE_CSC_GR_0			0x118
+#define IFTU_PLANE_CSC_GG_0			0x11C
+#define IFTU_PLANE_CSC_GB_0			0x120
+#define IFTU_PLANE_CSC_BR_0			0x124
+#define IFTU_PLANE_CSC_BG_0			0x128
+#define IFTU_PLANE_CSC_BB_0			0x12C
+#define IFTU_PLANE_CSC_UNK_130			0x130
+#define IFTU_PLANE_CSC_UNK_134			0x134
+#define IFTU_PLANE_CSC_RR_1			0x138
+#define IFTU_PLANE_CSC_RG_1			0x13C
+#define IFTU_PLANE_CSC_RB_1			0x140
+#define IFTU_PLANE_CSC_GR_1			0x144
+#define IFTU_PLANE_CSC_GG_1			0x148
+#define IFTU_PLANE_CSC_GB_1			0x14C
+#define IFTU_PLANE_CSC_BR_1			0x150
+#define IFTU_PLANE_CSC_BG_1			0x154
+#define IFTU_PLANE_CSC_BB_1			0x158
+#define IFTU_PLANE_CSC_UNK_15C			0x15C
+#define IFTU_PLANE_CSC_UNK_160			0x160
+#define IFTU_PLANE_CSC_UNK_164			0x164
+#define IFTU_PLANE_CSC_UNK_168			0x168
+
+#define IFTU_PLANE_CONFIG_REGS(bus, plane, cfg)	(IFTU_PLANE_REGS(bus, plane) + 0x200 + (cfg) * 0x100)
+
+#define IFTU_PLANE_CONFIG_FB_PADDR		0x00
+#define IFTU_PLANE_CONFIG_SRC_X			0x24
+#define IFTU_PLANE_CONFIG_SRC_Y			0x28
+#define IFTU_PLANE_CONFIG_SRC_PIXELFMT		0x40
+#define IFTU_PLANE_CONFIG_SRC_FB_WIDTH		0x44
+#define IFTU_PLANE_CONFIG_SRC_FB_HEIGHT		0x48
+#define IFTU_PLANE_CONFIG_CONTROL		0x4C
+#define IFTU_PLANE_CONFIG_DST_PIXELFMT		0xA0
+#define IFTU_PLANE_CONFIG_DST_WIDTH		0xA4
+#define IFTU_PLANE_CONFIG_DST_HEIGHT		0xA8
+#define IFTU_PLANE_CONFIG_SRC_W			0xC0
+#define IFTU_PLANE_CONFIG_SRC_H			0xC4
+#define IFTU_PLANE_CONFIG_DST_X			0xC8
+#define IFTU_PLANE_CONFIG_DST_Y			0xCC
+
+void iftu_bus_enable(int bus)
 {
-	volatile unsigned int *iftu_cregs = IFTU_CREGS(crtc);
+	volatile void *cregs = IFTU_CREGS(bus);
 
-	iftu_cregs[0] = 1;
+	writel(IFTU_CREG_CONTROL_ENABLE, cregs + IFTU_CREG_CONTROL);
+	writel(IFTU_CREG_CONTROL2_ALPHA_EN, cregs + IFTU_CREG_CONTROL2);
+	dmb();
 }
 
-void iftu_init_plane(int plane)
+void iftu_bus_plane_config_select(int bus, int plane, int config)
 {
-	volatile unsigned int *iftu_regs = IFTU_REGS(plane);
-	volatile unsigned int *iftu_cregs = IFTU_CREGS((plane >> 1) & 1);
+	volatile void *cregs = IFTU_CREGS(bus);
 
-	iftu_regs[0x20] = 0;
-	iftu_regs[0x21] = 0;
-	iftu_regs[0x22] = 0;
+	writel(config, cregs + IFTU_CREG_PLANE_CONFIG_BASE(plane) +
+			       IFTU_CREG_PLANE_CONFIG_SELECT);
+	dmb();
+}
 
-	iftu_regs[(0x200 + 0 * 0x100 + 0xA0) / 4] = 0x2000;
-	iftu_regs[(0x200 + 0 * 0x100 + 0xA4) / 4] = 1080;
-	iftu_regs[(0x200 + 0 * 0x100 + 0xA8) / 4] = 720;
+void iftu_bus_alpha_blending_control(int bus, int ctrl)
+{
+	volatile void *cregs = IFTU_CREGS(bus);
 
-	iftu_regs[(0x200 + 1 * 0x100 + 0xA0) / 4] = 0x2000;
-	iftu_regs[(0x200 + 1 * 0x100 + 0xA4) / 4] = 1080;
-	iftu_regs[(0x200 + 1 * 0x100 + 0xA8) / 4] = 720;
+	writel(ctrl, cregs + IFTU_CREG_ALPHA_BLENDING_CONTROL);
+	dmb();
+}
 
-	iftu_cregs[(0x10 + 0 * 0x8 + 0x00) / 4] = 0;
-	iftu_cregs[(0x10 + 0 * 0x8 + 0x04) / 4] = 0;
-	iftu_cregs[(0x10 + 1 * 0x8 + 0x00) / 4] = 0;
-	iftu_cregs[(0x10 + 1 * 0x8 + 0x04) / 4] = 0;
+void iftu_plane_set_fb_config(int bus, int plane, int config, struct iftu_plane_fb_config *cfg)
+{
+	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
 
-	iftu_cregs[0x20 / 4] = 2;
-
-	iftu_cregs[0] = 1;
-	iftu_cregs[1] = 1;
+	writel(cfg->paddr, regs + IFTU_PLANE_CONFIG_FB_PADDR);
+	writel(0, regs + IFTU_PLANE_CONFIG_SRC_X);
+	writel(0, regs + IFTU_PLANE_CONFIG_SRC_Y);
+	writel(cfg->pixelformat, regs + IFTU_PLANE_CONFIG_SRC_PIXELFMT);
+	writel(cfg->width, regs + IFTU_PLANE_CONFIG_SRC_FB_WIDTH);
+	writel(cfg->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
+	writel(0, regs + IFTU_PLANE_CONFIG_CONTROL);
+	writel(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
+	writel(1280, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
+	writel(720, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
+	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
+	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
+	writel(0x1A, regs + IFTU_PLANE_CONFIG_DST_X);
+	writel(0x0F, regs + IFTU_PLANE_CONFIG_DST_Y);
 
 	dmb();
 }
 
-void iftu_set_source_fb(int plane, struct iftu_plane_source_fb_info *info)
+void iftu_plane_set_alpha(int bus, int plane, unsigned int alpha)
 {
-	static const unsigned int crtc_mask = 0b10;
-	const unsigned int plane_regs_offset = 0x200 + ((crtc_mask >> 1) & 1) * 0x100;
+	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
-	volatile unsigned int *iftu_plane_regs = IFTU_REGS(plane) + plane_regs_offset;
-
-	iftu_plane_regs[0x00] = info->paddr;
-	iftu_plane_regs[0x01] = info->unk18;
-	iftu_plane_regs[0x02] = info->unk1C;
-
-	iftu_plane_regs[0x08] = info->unk20;
-	iftu_plane_regs[0x09] = info->src_x;
-	iftu_plane_regs[0x0A] = info->src_y;
-
-	iftu_plane_regs[0x10] = info->pixelformat;
-	iftu_plane_regs[0x11] = info->width;
-	iftu_plane_regs[0x12] = info->height;
-	iftu_plane_regs[0x13] = 1; // Control reg
-
-	iftu_plane_regs[0x15] = info->leftover_stride;
-	iftu_plane_regs[0x16] = info->unk10;
-
-	iftu_plane_regs[0x18] = info->vfront_porch;
-	iftu_plane_regs[0x19] = info->vback_porch;
-	iftu_plane_regs[0x1A] = info->hfront_porch;
-	iftu_plane_regs[0x1B] = info->hback_porch;
-
-	iftu_plane_regs[0x30] = info->src_w;
-	iftu_plane_regs[0x31] = info->src_h;
-	iftu_plane_regs[0x32] = info->dst_x;
-	iftu_plane_regs[0x33] = info->dst_y;
-	iftu_plane_regs[0x34] = info->dst_w;
-	iftu_plane_regs[0x35] = info->dst_h;
-
-	dmb();
-}
-
-void iftu_set_dst_conversion(int plane, unsigned int dst_width, unsigned int dst_height,
-	unsigned int dst_pixelformat, unsigned int unk44)
-{
-
-}
-
-void iftu_set_csc1(int plane, const struct iftu_csc_params *csc)
-{
-	volatile unsigned int *iftu_regs = IFTU_REGS(plane);
-
-	iftu_regs[0x4C] = csc->unk00;
-	iftu_regs[0x4D] = csc->unk04;
-	iftu_regs[0x4E] = csc->unk08;
-	iftu_regs[0x4F] = csc->unk0C;
-	iftu_regs[0x50] = csc->unk10;
-	iftu_regs[0x51] = csc->unk14;
-	iftu_regs[0x52] = csc->csc_rr;
-	iftu_regs[0x53] = csc->csc_rg;
-	iftu_regs[0x54] = csc->csc_rb;
-	iftu_regs[0x55] = csc->csc_gr;
-	iftu_regs[0x56] = csc->csc_gg;
-	iftu_regs[0x57] = csc->csc_gb;
-	iftu_regs[0x58] = csc->csc_br;
-	iftu_regs[0x59] = csc->csc_bg;
-	iftu_regs[0x5A] = csc->csc_bb;
-
-	dmb();
-}
-
-void iftu_set_csc2(int plane, const struct iftu_csc_params *csc)
-{
-	volatile unsigned int *iftu_regs = IFTU_REGS(plane);
-
-	iftu_regs[0x41] = csc->unk00;
-	iftu_regs[0x42] = csc->unk04;
-	iftu_regs[0x43] = csc->csc_rr;
-	iftu_regs[0x44] = csc->csc_rg;
-	iftu_regs[0x45] = csc->csc_rb;
-	iftu_regs[0x46] = csc->csc_gr;
-	iftu_regs[0x47] = csc->csc_gg;
-	iftu_regs[0x48] = csc->csc_gb;
-	iftu_regs[0x49] = csc->csc_br;
-	iftu_regs[0x4A] = csc->csc_bg;
-	iftu_regs[0x4B] = csc->csc_bb;
-
-	dmb();
-}
-
-void iftu_set_control_value(int plane, int value)
-{
-	unsigned int tmp;
-	unsigned int crtc = (plane >> 1) & 1;
-	volatile unsigned int *iftu_cregs = IFTU_CREGS(crtc);
-
-	tmp = 0; //iftu_cregs[1];
-
-	if (value == 0x80) {
-		iftu_cregs[8] = 0;
-		tmp &= ~1;
-	} else {
-		iftu_cregs[8] = value;
-		tmp |= 1;
-	}
-
-	iftu_cregs[1] = tmp;
-}
-
-void iftu_set_alpha(int plane, unsigned int alpha)
-{
-	volatile unsigned int *iftu_regs = IFTU_REGS(plane);
-
-	if (!((plane >> 1) & 1))
-		return;
-
-	if (alpha == 0x100)
-		iftu_regs[0x23] = 0;
+	if (alpha == 256)
+		writel(0, regs + IFTU_PLANE_ALPHA_VALUE);
 	else
-		iftu_regs[0x23] = alpha;
+		writel(alpha, regs + IFTU_PLANE_ALPHA_VALUE);
 
-	iftu_regs[0x28] = (alpha == 0x100);
+	writel(alpha == 256, regs + IFTU_PLANE_ALPHA_CONTROL);
+
+	dmb();
+}
+
+void iftu_plane_set_csc_enabled(int bus, int plane, int enabled)
+{
+	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+
+	writel(enabled, regs + IFTU_PLANE_CSC_CONTROL);
+
+	dmb();
+}
+
+void iftu_plane_set_csc0(int bus, int plane, const struct iftu_csc_params *csc)
+{
+	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+
+	writel(csc->unk00, regs + IFTU_PLANE_CSC_UNK_104);
+	writel(csc->unk04, regs + IFTU_PLANE_CSC_UNK_108);
+	writel(csc->csc_rr, regs + IFTU_PLANE_CSC_RR_0);
+	writel(csc->csc_rg, regs + IFTU_PLANE_CSC_RG_0);
+	writel(csc->csc_rb, regs + IFTU_PLANE_CSC_RB_0);
+	writel(csc->csc_gr, regs + IFTU_PLANE_CSC_GR_0);
+	writel(csc->csc_gg, regs + IFTU_PLANE_CSC_GG_0);
+	writel(csc->csc_gb, regs + IFTU_PLANE_CSC_GB_0);
+	writel(csc->csc_br, regs + IFTU_PLANE_CSC_BR_0);
+	writel(csc->csc_bg, regs + IFTU_PLANE_CSC_BG_0);
+	writel(csc->csc_bb, regs + IFTU_PLANE_CSC_BB_0);
+
+	dmb();
+}
+
+void iftu_plane_set_csc1(int bus, int plane, const struct iftu_csc_params *csc)
+{
+	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+
+	writel(csc->unk00, regs + IFTU_PLANE_CSC_UNK_130);
+	writel(csc->unk04, regs + IFTU_PLANE_CSC_UNK_134);
+	writel(csc->csc_rr, regs + IFTU_PLANE_CSC_RR_1);
+	writel(csc->csc_rg, regs + IFTU_PLANE_CSC_RG_1);
+	writel(csc->csc_rb, regs + IFTU_PLANE_CSC_RB_1);
+	writel(csc->csc_gr, regs + IFTU_PLANE_CSC_GR_1);
+	writel(csc->csc_gg, regs + IFTU_PLANE_CSC_GG_1);
+	writel(csc->csc_gb, regs + IFTU_PLANE_CSC_GB_1);
+	writel(csc->csc_br, regs + IFTU_PLANE_CSC_BR_1);
+	writel(csc->csc_bg, regs + IFTU_PLANE_CSC_BG_1);
+	writel(csc->csc_bb, regs + IFTU_PLANE_CSC_BB_1);
+	writel(csc->unk08, regs + IFTU_PLANE_CSC_UNK_15C);
+	writel(csc->unk0C, regs + IFTU_PLANE_CSC_UNK_160);
+	writel(csc->unk10, regs + IFTU_PLANE_CSC_UNK_164);
+	writel(csc->unk14, regs + IFTU_PLANE_CSC_UNK_168);
+
+	dmb();
 }
