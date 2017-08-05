@@ -44,7 +44,6 @@ int main(void)
 
 	dsi_init();
 	dsi_enable_bus(1, 0x8600);
-	delay(1000);
 
 	display_init(1);
 
