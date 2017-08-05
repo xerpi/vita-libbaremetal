@@ -5,7 +5,6 @@
 #include "gpio.h"
 #include "pervasive.h"
 #include "syscon.h"
-#include "log.h"
 
 #define HDMI_I2C_BUS	1
 #define HDMI_I2C_ADDR	0x7A
