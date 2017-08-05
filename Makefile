@@ -1,6 +1,6 @@
 TARGET	= baremetal-sample
 OBJS	= start.o main.o libc.o utils.o pervasive.o cdram.o uart.o gpio.o \
-	  i2c.o iftu.o dsi.o display.o spi.o syscon.o hdmi.o ctrl.o
+	  i2c.o iftu.o dsi.o display.o spi.o syscon.o hdmi.o ctrl.o draw.o
 
 PREFIX	= arm-vita-eabi
 CC	= $(PREFIX)-gcc

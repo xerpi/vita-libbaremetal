@@ -188,7 +188,7 @@ int hdmi_init(void)
 	} while (!(status & ADV7533_INT1_BKSV));
 
 	hdmi_write(HDMI_I2C_ADDR, ADV7533_REG_INT(1),
-		   (status & (unsigned char)~0xBF) | BIT(6));
+		   (status & (unsigned char)~0xBF) | ADV7533_INT1_BKSV);
 
 	return 0;
 }

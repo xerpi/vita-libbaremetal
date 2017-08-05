@@ -12,7 +12,7 @@
 #define IFTU_CREG_CONTROL2			0x04
 #define IFTU_CREG_CONTROL2_ALPHA_EN		BIT(0)
 
-#define IFTU_CREG_PLANE_CONFIG_BASE(i)		(0x10 + (i) * 0x10)
+#define IFTU_CREG_PLANE_CONFIG_BASE(i)		(0x10 + (i) * 0x08)
 #define IFTU_CREG_PLANE_CONFIG_SELECT		0x00
 
 #define IFTU_CREG_ALPHA_BLENDING_CONTROL	0x20
@@ -66,7 +66,7 @@
 #define IFTU_PLANE_CONFIG_DST_X			0xC8
 #define IFTU_PLANE_CONFIG_DST_Y			0xCC
 
-void iftu_bus_enable(int bus)
+void iftu_bus_enable(enum iftu_bus bus)
 {
 	volatile void *cregs = IFTU_CREGS(bus);
 
@@ -75,7 +75,7 @@ void iftu_bus_enable(int bus)
 	dmb();
 }
 
-void iftu_bus_plane_config_select(int bus, int plane, int config)
+void iftu_bus_plane_config_select(enum iftu_bus bus, enum iftu_plane plane, enum iftu_plane_config config)
 {
 	volatile void *cregs = IFTU_CREGS(bus);
 
@@ -84,7 +84,7 @@ void iftu_bus_plane_config_select(int bus, int plane, int config)
 	dmb();
 }
 
-void iftu_bus_alpha_blending_control(int bus, int ctrl)
+void iftu_bus_alpha_blending_control(enum iftu_bus bus, int ctrl)
 {
 	volatile void *cregs = IFTU_CREGS(bus);
 
@@ -92,29 +92,7 @@ void iftu_bus_alpha_blending_control(int bus, int ctrl)
 	dmb();
 }
 
-void iftu_plane_set_fb_config(int bus, int plane, int config, struct iftu_plane_fb_config *cfg)
-{
-	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
-
-	writel(cfg->paddr, regs + IFTU_PLANE_CONFIG_FB_PADDR);
-	writel(0, regs + IFTU_PLANE_CONFIG_SRC_X);
-	writel(0, regs + IFTU_PLANE_CONFIG_SRC_Y);
-	writel(cfg->pixelformat, regs + IFTU_PLANE_CONFIG_SRC_PIXELFMT);
-	writel(cfg->width, regs + IFTU_PLANE_CONFIG_SRC_FB_WIDTH);
-	writel(cfg->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
-	writel(0, regs + IFTU_PLANE_CONFIG_CONTROL);
-	writel(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
-	writel(1280, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
-	writel(720, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
-	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
-	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
-	writel(0x1A, regs + IFTU_PLANE_CONFIG_DST_X);
-	writel(0x0F, regs + IFTU_PLANE_CONFIG_DST_Y);
-
-	dmb();
-}
-
-void iftu_plane_set_alpha(int bus, int plane, unsigned int alpha)
+void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane, unsigned int alpha)
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
@@ -128,7 +106,7 @@ void iftu_plane_set_alpha(int bus, int plane, unsigned int alpha)
 	dmb();
 }
 
-void iftu_plane_set_csc_enabled(int bus, int plane, int enabled)
+void iftu_plane_set_csc_enabled(enum iftu_bus bus, enum iftu_plane plane, bool enabled)
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
@@ -137,7 +115,7 @@ void iftu_plane_set_csc_enabled(int bus, int plane, int enabled)
 	dmb();
 }
 
-void iftu_plane_set_csc0(int bus, int plane, const struct iftu_csc_params *csc)
+void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane, const struct iftu_csc_params *csc)
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
@@ -156,7 +134,7 @@ void iftu_plane_set_csc0(int bus, int plane, const struct iftu_csc_params *csc)
 	dmb();
 }
 
-void iftu_plane_set_csc1(int bus, int plane, const struct iftu_csc_params *csc)
+void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct iftu_csc_params *csc)
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
@@ -175,6 +153,40 @@ void iftu_plane_set_csc1(int bus, int plane, const struct iftu_csc_params *csc)
 	writel(csc->unk0C, regs + IFTU_PLANE_CSC_UNK_160);
 	writel(csc->unk10, regs + IFTU_PLANE_CSC_UNK_164);
 	writel(csc->unk14, regs + IFTU_PLANE_CSC_UNK_168);
+
+	dmb();
+}
+
+void iftu_plane_config_set_fb_config(enum iftu_bus bus, enum iftu_plane plane,
+				     enum iftu_plane_config config,
+				     struct iftu_plane_fb_config *fb)
+{
+	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
+
+	writel(fb->paddr, regs + IFTU_PLANE_CONFIG_FB_PADDR);
+	writel(0, regs + IFTU_PLANE_CONFIG_SRC_X);
+	writel(0, regs + IFTU_PLANE_CONFIG_SRC_Y);
+	writel(fb->pixelformat, regs + IFTU_PLANE_CONFIG_SRC_PIXELFMT);
+	writel(fb->width, regs + IFTU_PLANE_CONFIG_SRC_FB_WIDTH);
+	writel(fb->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
+	writel(0, regs + IFTU_PLANE_CONFIG_CONTROL);
+	writel(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
+	writel(1280, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
+	writel(720, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
+	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
+	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
+	writel(0x1A, regs + IFTU_PLANE_CONFIG_DST_X);
+	writel(0x0F, regs + IFTU_PLANE_CONFIG_DST_Y);
+
+	dmb();
+}
+
+void iftu_plane_config_set_enabled(enum iftu_bus bus, enum iftu_plane plane,
+				   enum iftu_plane_config config, bool enabled)
+{
+	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
+
+	writel(!enabled, regs + IFTU_PLANE_CONFIG_CONTROL);
 
 	dmb();
 }

@@ -4,10 +4,11 @@
 #include "i2c.h"
 #include "spi.h"
 #include "dsi.h"
-#include "display.h"
 #include "syscon.h"
 #include "hdmi.h"
+#include "display.h"
 #include "ctrl.h"
+#include "draw.h"
 #include "utils.h"
 #include "log.h"
 
@@ -45,7 +46,10 @@ int main(void)
 	dsi_init();
 	dsi_enable_bus(1, 0x8600);
 
-	display_init(1);
+	display_init(IFTU_BUS_HDMI);
+
+	draw_fill_screen(YELLOW);
+	draw_rectangle(50, 50, 100, 100, BLUE);
 
 	dsi_unk(1, 0x8600, 0);
 
