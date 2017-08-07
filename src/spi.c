@@ -1,21 +1,27 @@
 #include "spi.h"
+#include "pervasive.h"
 #include "utils.h"
 
-#define SPI0_BASE_ADDR			0xE0A00000
-#define SPI1_BASE_ADDR			0xE0A10000
-#define SPI2_BASE_ADDR			0xE0A20000
-
-#define SPI_REGS(i)			((void *)( \
-						(i) == 0 ? SPI0_BASE_ADDR : \
-						(i) == 1 ? SPI1_BASE_ADDR : \
-						           SPI2_BASE_ADDR))
+#define SPI_BASE_ADDR	0xE0A00000
+#define SPI_REGS(i)	((void *)(SPI_BASE_ADDR + (i) * 0x10000))
 
 int spi_init(int bus)
 {
 	volatile unsigned int *spi_regs = SPI_REGS(bus);
 
+	pervasive_clock_enable_spi(bus);
+	pervasive_reset_exit_spi(bus);
+
+	if (bus == 2) {
+		spi_regs[2] = 0x30001;
+		spi_regs[5] = 0xF;
+		spi_regs[3] = 3;
+	}
+
 	spi_regs[8] = 0;
-	dmb();
+	spi_regs[8];
+
+	dsb();
 
 	return 0;
 }

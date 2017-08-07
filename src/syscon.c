@@ -1,4 +1,5 @@
 #include "syscon.h"
+#include "pervasive.h"
 #include "spi.h"
 #include "gpio.h"
 #include "utils.h"
@@ -103,6 +104,8 @@ static void syscon_common_write(unsigned int data, unsigned short cmd, unsigned 
 
 int syscon_init(void)
 {
+	spi_init(0);
+
 	gpio_set_port_mode(0, 3, GPIO_PORT_MODE_OUTPUT);
 	gpio_set_port_mode(0, 4, GPIO_PORT_MODE_INPUT);
 	gpio_set_intr_mode(0, 4, 3);

@@ -1,6 +1,7 @@
 #include "display.h"
 #include "pervasive.h"
 #include "dsi.h"
+#include "oled.h"
 #include "hdmi.h"
 #include "libc.h"
 
@@ -66,7 +67,21 @@ static void display_iftu_setup(enum iftu_bus bus)
 
 static void display_init_oled(void)
 {
-	/* TODO */
+	static const unsigned int vic = 0;
+	unsigned int pixelclock;
+
+	dsi_get_pixelclock_for_vic(vic, 24, &pixelclock);
+
+	pervasive_dsi_set_pixelclock(0, pixelclock);
+	pervasive_clock_enable_dsi(0, 0xF);
+	pervasive_reset_exit_dsi(0, 7);
+
+	dsi_init();
+	dsi_enable_bus(DSI_BUS_OLED_LCD, vic);
+
+	dsi_unk(DSI_BUS_OLED_LCD, vic, 1);
+
+	oled_init();
 }
 
 static void display_init_lcd(void)
@@ -76,14 +91,19 @@ static void display_init_lcd(void)
 
 static void display_init_hdmi(void)
 {
-	pervasive_dsi_set_pixelclock(1, 0x2D45F9);
+	static const unsigned int vic = 0x8600;
+	unsigned int pixelclock;
+
+	dsi_get_pixelclock_for_vic(vic, 24, &pixelclock);
+
+	pervasive_dsi_set_pixelclock(1, pixelclock);
 	pervasive_clock_enable_dsi(1, 0xF);
 	pervasive_reset_exit_dsi(1, 7);
 
 	dsi_init();
-	dsi_enable_bus(1, 0x8600);
+	dsi_enable_bus(DSI_BUS_HDMI, vic);
 
-	dsi_unk(1, 0x8600, 0);
+	dsi_unk(DSI_BUS_HDMI, vic, 0);
 
 	hdmi_init();
 }

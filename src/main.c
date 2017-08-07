@@ -28,8 +28,6 @@ int main(void)
 	pervasive_reset_exit_uart(0);
 	pervasive_clock_enable_i2c(1);
 	pervasive_reset_exit_i2c(1);
-	pervasive_clock_enable_spi(0);
-	pervasive_reset_exit_spi(0);
 
 	uart_init(0, 115200);
 
@@ -37,14 +35,16 @@ int main(void)
 
 	cdram_enable();
 	i2c_init_bus(1);
-	spi_init(0);
 	syscon_init();
 
-	display_init(DISPLAY_TYPE_HDMI);
+	if (0)
+		display_init(DISPLAY_TYPE_HDMI);
+	else
+		display_init(DISPLAY_TYPE_OLED);
 
 	draw_fill_screen(BLACK);
 	draw_rectangle(50, 50, 100, 100, BLUE);
-	font_draw_string(10, 10, WHITE, "Hello world from baremetal!");
+	font_draw_string(10, 10, WHITE, "Hello world from baremetal aaaa!");
 
 	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
 	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);

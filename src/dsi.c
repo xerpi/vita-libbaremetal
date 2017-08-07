@@ -93,6 +93,16 @@ static struct {
 	{0x8730, &stru_BD0AE8},
 };
 
+static int dsi_lanes_for_bus[] = {
+	[DSI_BUS_0] = 2,
+	[DSI_BUS_1] = 3
+};
+
+static int dsi_unk07_for_bus[] = {
+	[DSI_BUS_0] = 0,
+	[DSI_BUS_1] = 2
+};
+
 static const struct dsi_timing_info *
 dsi_get_timing_info_for_vic(unsigned int vic)
 {
@@ -136,17 +146,33 @@ int dsi_get_dimensions_for_vic(unsigned int vic, unsigned int *width, unsigned i
 	return 0;
 }
 
-void dsi_enable_bus(int bus, unsigned int vic)
+int dsi_get_pixelclock_for_vic(unsigned int vic, unsigned int bpp, unsigned int *pixelclock)
+{
+	const struct dsi_timing_info *info = dsi_get_timing_info_for_vic(vic);
+	if (!info)
+		return -1;
+
+	if (pixelclock) {
+		if (bpp == 24)
+			*pixelclock = info->pixelclock_24bpp;
+		else
+			*pixelclock = info->pixelclock_30bpp;
+	}
+
+	return 0;
+}
+
+void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
 {
 	static const int pixel_size = 24;
-	static const int lanes = 3;
-	static const int unk07 = 2;
 
 	unsigned int packet[64];
 	unsigned int packet_size;
 	const struct dsi_timing_subinfo *subinfo;
 	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
 	volatile unsigned int *dsi_regs = DSI_REGS(bus);
+	int lanes = dsi_lanes_for_bus[bus];
+	int unk07 = dsi_unk07_for_bus[bus];
 
 	pervasive_dsi_misc_unk(bus);
 
@@ -660,10 +686,8 @@ LABEL_18:
 	dsi_regs[0x147] = 1;
 }
 
-void dsi_unk(int bus, unsigned int vic, unsigned int unk)
+void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 {
-	static const unsigned int bus_index = 1;
-	static const unsigned int lanes = 3;
 	static const unsigned int pixel_size = 24;
 	static const unsigned int intr_mask = 2;
 
@@ -671,6 +695,7 @@ void dsi_unk(int bus, unsigned int vic, unsigned int unk)
 
 	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
 	volatile unsigned int *dsi_regs = DSI_REGS(bus);
+	int lanes = dsi_lanes_for_bus[bus];
 
 	unsigned int flags = timing_info->flags;
 	unsigned int htotal = timing_info->htotal;
@@ -783,7 +808,7 @@ void dsi_unk(int bus, unsigned int vic, unsigned int unk)
 
 	dsi_regs[0x14] = dsi_regs[0x14];
 	dsi_regs[0x15] = intr_mask;
-	if (bus_index)
+	if (bus)
 		dsi_regs[0x20E] = 1;
 	else
 		dsi_regs[0x20E] = 0;

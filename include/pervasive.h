@@ -13,6 +13,7 @@ void pervasive_clock_enable_i2c(int bus);
 void pervasive_reset_exit_i2c(int bus);
 
 void pervasive_clock_enable_spi(int bus);
+void pervasive_clock_disable_spi(int bus);
 void pervasive_reset_exit_spi(int bus);
 
 void pervasive_clock_enable_dsi(int bus, int value);
