@@ -10,6 +10,12 @@
 #define FB_ADDR			0x20000000
 #define FB_SIZE			(4 * SCREEN_PITCH * SCREEN_HEIGHT)
 
-void display_init(enum iftu_bus bus);
+enum display_type {
+	DISPLAY_TYPE_OLED,
+	DISPLAY_TYPE_LCD,
+	DISPLAY_TYPE_HDMI,
+};
+
+void display_init(enum display_type type);
 
 #endif

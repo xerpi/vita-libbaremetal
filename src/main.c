@@ -40,22 +40,11 @@ int main(void)
 	spi_init(0);
 	syscon_init();
 
-	pervasive_dsi_set_pixelclock(1, 0x2D45F9);
-	pervasive_clock_enable_dsi(1, 0xF);
-	pervasive_reset_exit_dsi(1, 7);
-
-	dsi_init();
-	dsi_enable_bus(1, 0x8600);
-
-	display_init(IFTU_BUS_HDMI);
+	display_init(DISPLAY_TYPE_HDMI);
 
 	draw_fill_screen(BLACK);
 	draw_rectangle(50, 50, 100, 100, BLUE);
 	font_draw_string(10, 10, WHITE, "Hello world from baremetal!");
-
-	dsi_unk(1, 0x8600, 0);
-
-	hdmi_init();
 
 	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
 	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);

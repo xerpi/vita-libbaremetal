@@ -7,6 +7,13 @@
 #define dmb() asm volatile("dmb\n\t")
 #define dsb() asm volatile("dsb\n\t")
 
+static inline unsigned int rbit(unsigned int x)
+{
+	unsigned int xrev;
+	asm volatile("rbit %0, %1\n\t" : "=r"(xrev) : "r"(x));
+	return xrev;
+}
+
 static inline unsigned char readb(volatile void *addr)
 {
 	return *(unsigned char *)addr;
