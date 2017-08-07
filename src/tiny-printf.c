@@ -272,6 +272,7 @@ static int _vprintf(struct printf_info *info, const char *fmt, va_list va)
 						div_out(info, &num, div);
 				}
 				break;
+			case 'X':
 			case 'x':
 				if (islong) {
 					num = va_arg(va, unsigned long);

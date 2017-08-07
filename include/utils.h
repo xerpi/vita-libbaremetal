@@ -6,6 +6,7 @@
 
 #define dmb() asm volatile("dmb\n\t")
 #define dsb() asm volatile("dsb\n\t")
+#define wfe() asm volatile("wfe\n\t")
 
 static inline unsigned int rbit(unsigned int x)
 {
@@ -45,5 +46,6 @@ static inline void writel(unsigned int val, volatile void *addr)
 }
 
 void delay(int n);
+unsigned int get_cpu_id(void);
 
 #endif

@@ -3,7 +3,23 @@
 
 #define CTRL_BUTTON_HELD(ctrl, button) !((ctrl) & (button))
 
-#define CTRL_PSBUTTON (1 << 14)
+#define CTRL_UP		(1 << 0)
+#define CTRL_RIGHT	(1 << 1)
+#define CTRL_DOWN	(1 << 2)
+#define CTRL_LEFT	(1 << 3)
+#define CTRL_TRIANGLE	(1 << 4)
+#define CTRL_CIRCLE	(1 << 5)
+#define CTRL_CROSS	(1 << 6)
+#define CTRL_SQUARE	(1 << 7)
+#define CTRL_SELECT	(1 << 8)
+#define CTRL_L		(1 << 9)
+#define CTRL_R		(1 << 10)
+#define CTRL_START	(1 << 11)
+#define CTRL_PSBUTTON	(1 << 12)
+#define CTRL_POWER	(1 << 14)
+#define CTRL_VOLUP	(1 << 16)
+#define CTRL_VOLDOWN	(1 << 17)
+#define CTRL_HEADPHONE	(1 << 27)
 
 void ctrl_read(unsigned int *data);
 

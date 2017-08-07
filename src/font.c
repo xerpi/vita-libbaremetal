@@ -1,7 +1,9 @@
 #include "font.h"
 #include "display.h"
+#include <stdio.h>
 
-#define GLYPH_SIZE 16
+#define GLYPH_SIZE	16
+#define BG_COLOR	BLACK
 
 extern unsigned char msx_font[];
 
@@ -15,8 +17,12 @@ void font_draw_char(int x, int y, unsigned int color, char c)
 
 	for (i = 0; i < 8; i++) {
 		for (j = 0; j < 8; j++) {
+			unsigned int c = BG_COLOR;
+
 			if (*glyph & (128 >> j))
-				draw_rectangle(x + 2 * j, y + 2 * i, 2, 2, color);
+				c = color;
+
+			draw_rectangle(x + 2 * j, y + 2 * i, 2, 2, c);
 		}
 		glyph++;
 	}
