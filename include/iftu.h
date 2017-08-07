@@ -50,15 +50,23 @@ struct iftu_csc_params {
 };
 
 void iftu_bus_enable(enum iftu_bus bus);
-void iftu_bus_plane_config_select(enum iftu_bus bus, enum iftu_plane plane, enum iftu_plane_config config);
+void iftu_bus_plane_config_select(enum iftu_bus bus, enum iftu_plane plane,
+				  enum iftu_plane_config config);
 void iftu_bus_alpha_blending_control(enum iftu_bus bus, int ctrl);
 
-void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane, unsigned int alpha);
+void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane,
+			  unsigned int alpha);
 void iftu_plane_set_csc_enabled(enum iftu_bus bus, enum iftu_plane plane, bool enabled);
-void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane, const struct iftu_csc_params *csc);
-void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct iftu_csc_params *csc);
+void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane,
+			 const struct iftu_csc_params *csc);
+void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane,
+			 const struct iftu_csc_params *csc);
 
-void iftu_plane_config_set_fb_config(enum iftu_bus bus, enum iftu_plane plane, enum iftu_plane_config config, struct iftu_plane_fb_config *fb);
-void iftu_plane_config_set_enabled(enum iftu_bus bus, enum iftu_plane plane, enum iftu_plane_config config, bool enabled);
+void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
+				  enum iftu_plane_config config,
+				  const struct iftu_plane_fb_config *fb,
+				  unsigned int dst_w, unsigned int dst_h);
+void iftu_plane_config_set_enabled(enum iftu_bus bus, enum iftu_plane plane,
+				   enum iftu_plane_config config, bool enabled);
 
 #endif

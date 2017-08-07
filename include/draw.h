@@ -17,13 +17,18 @@
 #define WHITE			RGBA8(255, 255, 255, 255)
 #define BLACK			RGBA8(0,   0,   0,   255)
 
-static inline void draw_pixel(int x, int y, unsigned int color)
-{
-	*(unsigned int *)(FB_ADDR + 4 * (x + y * SCREEN_PITCH)) = color;
-}
-
 void draw_rectangle(int x, int y, int w, int h, unsigned int color);
 
-#define draw_fill_screen(color) draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color)
+static inline void draw_pixel(int x, int y, unsigned int color)
+{
+	const struct display_config *config = display_get_current_config();
+	*(unsigned int *)(config->addr + 4 * (x + y * config->pitch)) = color;
+}
+
+static inline void draw_fill_screen(unsigned int color)
+{
+	const struct display_config *config = display_get_current_config();
+	draw_rectangle(0, 0, config->width, config->height, color);
+}
 
 #endif

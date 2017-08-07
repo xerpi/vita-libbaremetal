@@ -3,19 +3,20 @@
 
 #include "iftu.h"
 
-#define SCREEN_WIDTH		960
-#define SCREEN_HEIGHT		544
-#define SCREEN_PITCH		960
-
-#define FB_ADDR			0x20000000
-#define FB_SIZE			(4 * SCREEN_PITCH * SCREEN_HEIGHT)
-
 enum display_type {
 	DISPLAY_TYPE_OLED,
 	DISPLAY_TYPE_LCD,
 	DISPLAY_TYPE_HDMI,
 };
 
+struct display_config {
+	unsigned int addr;
+	unsigned int pitch;
+	unsigned int width;
+	unsigned int height;
+};
+
 void display_init(enum display_type type);
+const struct display_config *display_get_current_config(void);
 
 #endif

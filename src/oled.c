@@ -180,15 +180,6 @@ static void oled_write_cmdlist(const struct oled_cmd *cmdlist)
 	}
 }
 
-static void oled_read_ddb_start(void)
-{
-	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist1);
-	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist3);
-	oled_write_cmdlist((struct oled_cmd *)oled_disp_on_cmdlist);
-	oled_write_cmdlist((struct oled_cmd *)oled_color_space_mode_0_cmdlist);
-	oled_write_cmdlist((struct oled_cmd *)oled_brightness_cmdlist);
-}
-
 int oled_init(void)
 {
 	spi_init(2);
@@ -198,9 +189,11 @@ int oled_init(void)
 			   GPIO_PORT_MODE_OUTPUT);
 	gpio_port_set(0, GPIO_PORT_OLED);
 
-	delay(2000);
-
-	oled_read_ddb_start();
+	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist1);
+	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist3);
+	oled_write_cmdlist((struct oled_cmd *)oled_disp_on_cmdlist);
+	oled_write_cmdlist((struct oled_cmd *)oled_color_space_mode_0_cmdlist);
+	oled_write_cmdlist((struct oled_cmd *)oled_brightness_cmdlist);
 
 	return 0;
 }

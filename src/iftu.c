@@ -157,11 +157,14 @@ void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct 
 	dmb();
 }
 
-void iftu_plane_config_set_fb_config(enum iftu_bus bus, enum iftu_plane plane,
-				     enum iftu_plane_config config,
-				     struct iftu_plane_fb_config *fb)
+void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
+				  enum iftu_plane_config config,
+				  const struct iftu_plane_fb_config *fb,
+				  unsigned int dst_w, unsigned int dst_h)
 {
 	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
+
+	/* TODO: Properly use pitch instead of width */
 
 	writel(fb->paddr, regs + IFTU_PLANE_CONFIG_FB_PADDR);
 	writel(0, regs + IFTU_PLANE_CONFIG_SRC_X);
@@ -171,8 +174,8 @@ void iftu_plane_config_set_fb_config(enum iftu_bus bus, enum iftu_plane plane,
 	writel(fb->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
 	writel(0, regs + IFTU_PLANE_CONFIG_CONTROL);
 	writel(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
-	writel(960, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
-	writel(544, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
+	writel(dst_w, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
+	writel(dst_h, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
 	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
 	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
 	writel(0, regs + IFTU_PLANE_CONFIG_DST_X);

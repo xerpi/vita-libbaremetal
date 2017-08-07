@@ -1,4 +1,5 @@
 #include "font.h"
+#include "display.h"
 
 #define GLYPH_SIZE 16
 
@@ -23,6 +24,7 @@ void font_draw_char(int x, int y, unsigned int color, char c)
 
 void font_draw_string(int x, int y, unsigned int color, const char *s)
 {
+	const struct display_config *config = display_get_current_config();
 	int start_x = x;
 
 	while (*s) {
@@ -36,10 +38,10 @@ void font_draw_string(int x, int y, unsigned int color, const char *s)
 			x += GLYPH_SIZE;
 		}
 
-		if (x + GLYPH_SIZE >= SCREEN_WIDTH)
+		if (x + GLYPH_SIZE >= config->width)
 			x = start_x;
 
-		if (y + GLYPH_SIZE >= SCREEN_HEIGHT)
+		if (y + GLYPH_SIZE >= config->height)
 			y = 0;
 
 		s++;
