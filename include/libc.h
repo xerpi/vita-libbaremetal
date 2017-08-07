@@ -1,31 +1,24 @@
-/* Grabbed from HBL (https://valentine-hbl.googlecode.com)*/
-
 #ifndef LIBC_H
 #define LIBC_H
 
-#include <psp2/types.h>
+#include <stddef.h>
 
-typedef unsigned char byte;
+void *memset(void *s, int c, size_t n);
+void *memcpy(void *dest, const void *src, size_t n);
 
-void *memset(void * ptr, int value, size_t num);
-void *memcpy(void *destination, const void *source, size_t num);
-//Returns number of digits
-//int u32tostr(u32 n, char *out);
-void wstr_to_str(const wchar_t *in, char *out);
+static inline int isalpha(int c)
+{
+	return ((unsigned)c | 32) - 'a' < 26;
+}
 
-#include <stdarg.h>
+static inline int isdigit(int c)
+{
+	return (unsigned)c - '0' < 10;
+}
 
-void putcp(void *p, char c);
-void tfp_format(void *putp, void (*putf) (void *, char), char *fmt, va_list va);
-
-
-//void	numu64tostr(uint64_t n, char *out);
-//int	strlen(const char *text);
-//char *strcpy(char *dest, const char *src);
-//void	wstr_to_str(const wchar_t *in, char *out);
-//void	wcstrcpy(wchar_t *destination, const wchar_t *source);
-//wchar_t *wcstrcat(wchar_t *destination, const wchar_t *source);
-//int  n_digits(int n);
-//void int_to_wstr(int n, wchar_t *dest);
+static inline int isalnum(int c)
+{
+	return isalpha(c) || isdigit(c);
+}
 
 #endif

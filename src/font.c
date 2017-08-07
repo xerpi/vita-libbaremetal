@@ -47,3 +47,15 @@ void font_draw_string(int x, int y, unsigned int color, const char *s)
 		s++;
 	}
 }
+
+void font_draw_stringf(int x, int y, unsigned int color, const char *s, ...)
+{
+	char buf[256];
+	va_list argptr;
+
+	va_start(argptr, s);
+	vsnprintf(buf, sizeof(buf), s, argptr);
+	va_end(argptr);
+
+	font_draw_string(x, y, color, buf);
+}

@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include "pervasive.h"
 #include "pervasive.h"
 #include "cdram.h"
 #include "gpio.h"
@@ -57,11 +59,14 @@ int main(void)
 		static int i = 0;
 		unsigned int ctrl_data;
 
+		draw_rectangle(50, 50, 50, 100, RED);
+		font_draw_stringf(50, 60, BLACK, "%d", i);
+
 		ctrl_read(&ctrl_data);
 		if (CTRL_BUTTON_HELD(ctrl_data, CTRL_PSBUTTON))
 			syscon_reset_device(SYSCON_RESET_COLD_RESET, 0);
 
-		if (i++ % 1000 < 500)
+		if (i++ % 100 < 50)
 			gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
 		else
 			gpio_port_clear(0, GPIO_PORT_GAMECARD_LED);
