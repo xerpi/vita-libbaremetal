@@ -25,7 +25,8 @@ static inline enum iftu_bus iftu_bus_for_display_type(enum display_type type)
 }
 
 static void display_init_iftu_plane(enum iftu_bus bus, enum iftu_plane plane,
-	enum iftu_plane_config config, unsigned int fb_paddr)
+	enum iftu_plane_config config, unsigned int fb_width,
+	unsigned int fb_height, unsigned int fb_paddr)
 {
 	struct iftu_plane_fb_config fb_cfg;
 
@@ -36,18 +37,33 @@ static void display_init_iftu_plane(enum iftu_bus bus, enum iftu_plane plane,
 
 	fb_cfg.paddr = fb_paddr;
 	fb_cfg.pixelformat = IFTU_FB_PIXELFORMAT_A8B8G8R8;
-	fb_cfg.width = 1280;
-	fb_cfg.height = 720;
+	fb_cfg.width = fb_width;
+	fb_cfg.height = fb_height;
 
 	iftu_plane_config_set_fb_config(bus, plane, config, &fb_cfg);
 }
 
 static void display_iftu_setup(enum iftu_bus bus)
 {
-	display_init_iftu_plane(bus, IFTU_PLANE_A, IFTU_PLANE_CONFIG_0, FB_ADDR);
-	display_init_iftu_plane(bus, IFTU_PLANE_A, IFTU_PLANE_CONFIG_1, FB_ADDR);
-	display_init_iftu_plane(bus, IFTU_PLANE_B, IFTU_PLANE_CONFIG_0, FB_ADDR);
-	display_init_iftu_plane(bus, IFTU_PLANE_B, IFTU_PLANE_CONFIG_1, FB_ADDR);
+	unsigned int width;
+	unsigned int height;
+
+	if (bus == IFTU_BUS_0) {
+		width = 960;
+		height = 544;
+	} else if (bus == IFTU_BUS_1) {
+		width = 1280;
+		height = 720;
+	}
+
+	display_init_iftu_plane(bus, IFTU_PLANE_A, IFTU_PLANE_CONFIG_0,
+				width, height, FB_ADDR);
+	display_init_iftu_plane(bus, IFTU_PLANE_A, IFTU_PLANE_CONFIG_1,
+				width, height, FB_ADDR);
+	display_init_iftu_plane(bus, IFTU_PLANE_B, IFTU_PLANE_CONFIG_0,
+				width, height, FB_ADDR);
+	display_init_iftu_plane(bus, IFTU_PLANE_B, IFTU_PLANE_CONFIG_1,
+				width, height, FB_ADDR);
 
 	/*
 	 * Enable the first plane and select the first plane config.

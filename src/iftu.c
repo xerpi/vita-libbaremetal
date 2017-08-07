@@ -171,12 +171,12 @@ void iftu_plane_config_set_fb_config(enum iftu_bus bus, enum iftu_plane plane,
 	writel(fb->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
 	writel(0, regs + IFTU_PLANE_CONFIG_CONTROL);
 	writel(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
-	writel(1280, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
-	writel(720, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
+	writel(960, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
+	writel(544, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
 	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
 	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
-	writel(0x1A, regs + IFTU_PLANE_CONFIG_DST_X);
-	writel(0x0F, regs + IFTU_PLANE_CONFIG_DST_Y);
+	writel(0, regs + IFTU_PLANE_CONFIG_DST_X);
+	writel(0, regs + IFTU_PLANE_CONFIG_DST_Y);
 
 	dmb();
 }

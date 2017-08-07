@@ -61,6 +61,24 @@ static const unsigned char oled_disp_off_cmdlist[] = {
 	0xFF
 };
 
+static const unsigned char oled_color_space_mode_0_cmdlist[] = {
+	0xB3, 1, 0,
+	0xFF
+};
+
+static const unsigned char oled_color_space_mode_1_cmdlist[] = {
+	0xB3, 1, 1,
+	0xFF
+};
+
+static const unsigned char oled_brightness_cmdlist[] = {
+	0xF9, 0x16, 1, 0x79, 0x78, 0x8D, 0xD9, 0xDF, 0xD5, 0xCB, 0xCF, 0xC5, 0xE5, 0xE0, 0xE4, 0xDC, 0xB8, 0xD4, 0xFA, 0xED, 0xE6, 0x2F, 0, 0x2F,
+	0xF9, 1, 0,
+	0x26, 1, 0,
+	0xB2, 1, 0x15,
+	0xFF
+};
+
 static void oled_write_cmd(const struct oled_cmd *cmd)
 {
 	unsigned int i;
@@ -167,6 +185,8 @@ static void oled_read_ddb_start(void)
 	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist1);
 	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist3);
 	oled_write_cmdlist((struct oled_cmd *)oled_disp_on_cmdlist);
+	oled_write_cmdlist((struct oled_cmd *)oled_color_space_mode_0_cmdlist);
+	oled_write_cmdlist((struct oled_cmd *)oled_brightness_cmdlist);
 }
 
 int oled_init(void)

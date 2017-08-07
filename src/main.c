@@ -42,9 +42,11 @@ int main(void)
 	else
 		display_init(DISPLAY_TYPE_OLED);
 
-	draw_fill_screen(BLACK);
-	draw_rectangle(50, 50, 100, 100, BLUE);
-	font_draw_string(10, 10, WHITE, "Hello world from baremetal aaaa!");
+	draw_fill_screen(WHITE);
+	draw_rectangle(50, 50, 100, 100, RED);
+	draw_rectangle(50 + 150, 50, 100, 100, GREEN);
+	draw_rectangle(50 + 2 * 150, 50, 100, 100, BLUE);
+	font_draw_string(10, 10, BLACK, "Hello world from baremetal!");
 
 	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
 	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
