@@ -4,6 +4,7 @@
 #include "gpio.h"
 #include "i2c.h"
 #include "syscon.h"
+#include "sysroot.h"
 #include "display.h"
 #include "ctrl.h"
 #include "draw.h"
@@ -11,7 +12,7 @@
 #include "utils.h"
 #include "log.h"
 
-int main(void)
+int main(struct sysroot_buffer *sysroot)
 {
 	if (get_cpu_id() != 0) {
 		while (1)
@@ -33,7 +34,7 @@ int main(void)
 	i2c_init_bus(1);
 	syscon_init();
 
-	if (0)
+	if (sysroot_model_is_dolce(sysroot))
 		display_init(DISPLAY_TYPE_HDMI);
 	else
 		display_init(DISPLAY_TYPE_OLED);
@@ -53,13 +54,17 @@ int main(void)
 		static int i = 0;
 		unsigned int ctrl_data;
 
-		font_draw_stringf(50, 60, WHITE, "0x%08x", i);
+		font_draw_stringf(50, 60, WHITE, "Model: 0x%04X\n", sysroot->model);
+		font_draw_stringf(50, 80, WHITE, "Device type: 0x%04X\n", sysroot->device_type);
+		font_draw_stringf(50, 100, WHITE, "Device config: 0x%04X\n", sysroot->device_config);
+		font_draw_stringf(50, 120, WHITE, "Type: 0x%04X\n", sysroot->type);
+		font_draw_stringf(50, 140, WHITE, "UnkD4: 0x%08X\n", sysroot->unkd4[0]);
 
 		ctrl_read(&ctrl_data);
 		if (CTRL_BUTTON_HELD(ctrl_data, CTRL_POWER))
 			syscon_reset_device(SYSCON_RESET_COLD_RESET, 0);
 
-		if (i++ % 100 < 50)
+		if (i++ % 10 < 5)
 			gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
 		else
 			gpio_port_clear(0, GPIO_PORT_GAMECARD_LED);

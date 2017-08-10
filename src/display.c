@@ -32,6 +32,7 @@ static void display_init_iftu_plane(enum iftu_bus bus, enum iftu_plane plane,
 	enum iftu_plane_config config, const struct display_config *dispcfg)
 {
 	struct iftu_plane_fb_config fb_cfg;
+	unsigned int dst_x, dst_y;
 
 	iftu_plane_set_alpha(bus, plane, 256);
 	iftu_plane_set_csc0(bus, plane, &YCbCr_to_RGB_HDTV_C0180C);
@@ -43,7 +44,15 @@ static void display_init_iftu_plane(enum iftu_bus bus, enum iftu_plane plane,
 	fb_cfg.width = dispcfg->width;
 	fb_cfg.height = dispcfg->height;
 
-	iftu_plane_config_set_config(bus, plane, config, &fb_cfg,
+	if (bus == IFTU_BUS_OLED_LCD) {
+		dst_x = 0;
+		dst_y = 0;
+	} else {
+		dst_x = 26;
+		dst_y = 15;
+	}
+
+	iftu_plane_config_set_config(bus, plane, config, &fb_cfg, dst_x, dst_y,
 				     dispcfg->width, dispcfg->height);
 }
 

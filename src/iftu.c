@@ -160,6 +160,7 @@ void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct 
 void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
 				  enum iftu_plane_config config,
 				  const struct iftu_plane_fb_config *fb,
+				  unsigned int dst_x, unsigned int dst_y,
 				  unsigned int dst_w, unsigned int dst_h)
 {
 	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
@@ -178,8 +179,8 @@ void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
 	writel(dst_h, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
 	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
 	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
-	writel(0, regs + IFTU_PLANE_CONFIG_DST_X);
-	writel(0, regs + IFTU_PLANE_CONFIG_DST_Y);
+	writel(dst_x, regs + IFTU_PLANE_CONFIG_DST_X);
+	writel(dst_y, regs + IFTU_PLANE_CONFIG_DST_Y);
 
 	dmb();
 }

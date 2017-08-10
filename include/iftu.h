@@ -65,6 +65,7 @@ void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane,
 void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
 				  enum iftu_plane_config config,
 				  const struct iftu_plane_fb_config *fb,
+				  unsigned int dst_x, unsigned int dst_y,
 				  unsigned int dst_w, unsigned int dst_h);
 void iftu_plane_config_set_enabled(enum iftu_bus bus, enum iftu_plane plane,
 				   enum iftu_plane_config config, bool enabled);
