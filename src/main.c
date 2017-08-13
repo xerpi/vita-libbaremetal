@@ -36,6 +36,8 @@ int main(struct sysroot_buffer *sysroot)
 
 	if (sysroot_model_is_dolce(sysroot))
 		display_init(DISPLAY_TYPE_HDMI);
+	else if (sysroot_model_is_vita2k(sysroot))
+		display_init(DISPLAY_TYPE_LCD);
 	else
 		display_init(DISPLAY_TYPE_OLED);
 

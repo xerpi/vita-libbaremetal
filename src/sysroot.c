@@ -38,6 +38,19 @@ int sysroot_model_is_dolce(const struct sysroot_buffer *sysroot)
 	return 0;
 }
 
+int sysroot_model_is_vita2k(const struct sysroot_buffer *sysroot)
+{
+	const unsigned int unkd4_mask = sysroot->unkd4[0] & 0xFF0000;
+
+	if (sysroot_model_is_dolce(sysroot))
+		return 0;
+
+	if (unkd4_mask == 0x800000)
+		return 1;
+
+	return 0;
+}
+
 int sysroot_model_is_unk(const struct sysroot_buffer *sysroot)
 {
 	const unsigned short device_config = __builtin_bswap16(sysroot->device_config);

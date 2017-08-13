@@ -48,6 +48,7 @@ struct sysroot_buffer {
 
 int sysroot_model_is_vita(const struct sysroot_buffer *sysroot);
 int sysroot_model_is_dolce(const struct sysroot_buffer *sysroot);
+int sysroot_model_is_vita2k(const struct sysroot_buffer *sysroot);
 int sysroot_model_is_unk(const struct sysroot_buffer *sysroot);
 
 #endif
