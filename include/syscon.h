@@ -10,5 +10,6 @@ int syscon_init(void);
 void syscon_reset_device(int type, int unk);
 void syscon_set_hdmi_cdc_hpd(int enable);
 void syscon_ctrl_read(unsigned int *data);
+void syscon_msif_set_power(int enable);
 
 #endif
