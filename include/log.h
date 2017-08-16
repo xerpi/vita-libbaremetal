@@ -3,21 +3,7 @@
 
 #include "uart.h"
 
-#define LOG(str) \
-	do { \
-		uart_print(0, str); \
-		uart_write(0, '\n'); \
-		uart_write(0, '\r'); \
-	} while (0)
-
-#define LOG_HEX(x) \
-	do { \
-		uart_write(0, '0'); \
-		uart_write(0, 'x'); \
-		for (int __i = 28; __i >= 0; __i -= 4) \
-			uart_write(0, "0123456789ABCDEF"[((x) >> __i) & 0xF]); \
-		uart_write(0, '\n'); \
-		uart_write(0, '\r'); \
-	} while (0)
+#define LOG(...)	uart_printf(0, __VA_ARGS__)
+#define LOG_HEX(x)	uart_printf(0, "0x%08X\n", x)
 
 #endif

@@ -79,4 +79,3 @@ void spi_read_end(int bus)
 	spi_regs[4];
 	dsb();
 }
-

@@ -1,7 +1,8 @@
 #ifndef CTRL_H
 #define CTRL_H
 
-#define CTRL_BUTTON_HELD(ctrl, button) !((ctrl) & (button))
+#define CTRL_BUTTON_HELD(ctrl, button)		!((ctrl) & (button))
+#define CTRL_BUTTON_PRESSED(ctrl, old, button)	!(((ctrl) & ~(old)) & (button))
 
 #define CTRL_UP		(1 << 0)
 #define CTRL_RIGHT	(1 << 1)

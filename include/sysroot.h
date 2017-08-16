@@ -40,15 +40,18 @@ struct sysroot_buffer {
 	unsigned int boot_type_indicator_2;
 	unsigned int unkc8[(0xd0 - 0xc8) / 4];
 	unsigned int suspend_saved_context_paddr;
-	unsigned int unkd4[(0xf8 - 0xd4) / 4];
+	unsigned int hw_info;
+	unsigned int unkd8[(0xf8 - 0xd8) / 4];
 	unsigned int bootloader_revision;
 	unsigned int sysroot_magic_value;
 	unsigned char encrypted_session_key[0x20];
 } __attribute__((packed));
 
-int sysroot_model_is_vita(const struct sysroot_buffer *sysroot);
-int sysroot_model_is_dolce(const struct sysroot_buffer *sysroot);
-int sysroot_model_is_vita2k(const struct sysroot_buffer *sysroot);
-int sysroot_model_is_unk(const struct sysroot_buffer *sysroot);
+void sysroot_init(const struct sysroot_buffer *sysroot_buffer);
+unsigned int sysroot_get_hw_info(void);
+int sysroot_model_is_vita(void);
+int sysroot_model_is_dolce(void);
+int sysroot_model_is_vita2k(void);
+int sysroot_model_is_unk(void);
 
 #endif

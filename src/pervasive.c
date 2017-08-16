@@ -6,7 +6,9 @@
 #define PERVASIVE_GATE_BASE_ADDR	0xE3102000
 #define PERVASIVE_BASECLK_BASE_ADDR	0xE3103000
 #define PERVASIVE_MISC_BASE_ADDR	0xE3100000
+#define PERVASIVE2_BASE_ADDR		0xE3110000
 
+#define PERVASIVE_BASECLK_MSIF		((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0xB0))
 #define PERVASIVE_BASECLK_DSI_REGS(i)	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x180 - (i) * 0x80))
 #define PERVASIVE_BASECLK_HDMI_CEC	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x1D0))
 
@@ -196,6 +198,26 @@ void pervasive_reset_exit_dsi(int bus, int value)
 	pervasive_mask_and_not(PERVASIVE_RESET_BASE_ADDR + 0x80 + 4 * bus, value);
 }
 
+void pervasive_clock_enable_msif(void)
+{
+	pervasive_mask_or(PERVASIVE_GATE_BASE_ADDR + 0xB0, 1);
+}
+
+void pervasive_clock_disable_msif(void)
+{
+	pervasive_mask_and_not(PERVASIVE_GATE_BASE_ADDR + 0xB0, 1);
+}
+
+void pervasive_reset_exit_msif(void)
+{
+	pervasive_mask_and_not(PERVASIVE_RESET_BASE_ADDR + 0xB0, 1);
+}
+
+void pervasive_reset_enter_msif(void)
+{
+	pervasive_mask_or(PERVASIVE_RESET_BASE_ADDR + 0xB0, 1);
+}
+
 void pervasive_dsi_set_pixelclock(int bus, int pixelclock)
 {
 	volatile unsigned int *baseclk_dsi_regs = PERVASIVE_BASECLK_DSI_REGS(bus);
@@ -256,5 +278,40 @@ void pervasive_dsi_misc_unk(int bus)
 void pervasive_hdmi_cec_set_enabled(int enable)
 {
 	*(volatile unsigned int *)PERVASIVE_BASECLK_HDMI_CEC = enable;
+	dmb();
+}
+
+int pervasive_msif_get_card_insert_state(void)
+{
+	return *(volatile unsigned int *)(PERVASIVE2_BASE_ADDR + 0xF40) & 1;
+}
+
+unsigned int pervasive_msif_unk(void)
+{
+	unsigned int val;
+	volatile unsigned int *pervasive2_regs = (void *)PERVASIVE2_BASE_ADDR;
+
+	val = pervasive2_regs[0x3D1];
+	pervasive2_regs[0x3D1] = val;
+	pervasive2_regs[0x3D1];
+	dsb();
+
+	return val;
+}
+
+void pervasive_msif_set_clock(unsigned int clock)
+{
+	unsigned int val;
+	volatile unsigned int *baseclk_msif_regs = PERVASIVE_BASECLK_MSIF;
+
+	if ((clock & ~(1 << 2)) > 2)
+		return;
+
+	if (clock & (1 << 2))
+		val = 0x10000;
+	else
+		val = 0;
+
+	*baseclk_msif_regs = (clock & 0b11) | val;
 	dmb();
 }

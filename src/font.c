@@ -1,6 +1,7 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include "font.h"
 #include "display.h"
-#include <stdio.h>
 
 #define GLYPH_SIZE	16
 #define BG_COLOR	BLACK

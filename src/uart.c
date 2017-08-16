@@ -1,3 +1,5 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include "uart.h"
 #include "utils.h"
 
@@ -108,6 +110,22 @@ unsigned int uart_read(int bus)
 
 void uart_print(int bus, const char *str)
 {
-	while (*str)
+	while (*str) {
+		if (*str == '\n')
+			uart_write(bus, '\r');
+
 		uart_write(bus, *str++);
+	}
+}
+
+void uart_printf(int bus, const char *s, ...)
+{
+	char buf[256];
+	va_list argptr;
+
+	va_start(argptr, s);
+	vsnprintf(buf, sizeof(buf), s, argptr);
+	va_end(argptr);
+
+	uart_print(bus, buf);
 }
