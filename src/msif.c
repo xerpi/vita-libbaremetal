@@ -34,6 +34,38 @@
 #define MS_INT_REG_ERR		0x40
 #define MS_INT_REG_CED		0x80
 
+static int ms_wait_ready(void)
+{
+	unsigned int tmp;
+
+	do {
+		tmp = readw(MSIF_BASE_ADDR + MSIF_STATUS_REG);
+	} while (!(tmp & (MSIF_STATUS_READY | MSIF_STATUS_TIMEOUT | MSIF_STATUS_CRC_ERROR)));
+
+	if (tmp & (MSIF_STATUS_TIMEOUT | MSIF_STATUS_CRC_ERROR))
+		return 0;
+
+	return 0;
+}
+
+static void ms_wait_fifo_rw(void)
+{
+	unsigned int tmp;
+
+	do {
+		tmp = readw(MSIF_BASE_ADDR + MSIF_STATUS_REG);
+	} while (!(tmp & MSIF_STATUS_FIFO_RW));
+}
+
+static void ms_wait_not_reset(void)
+{
+	unsigned int tmp;
+
+	do {
+		tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	} while (tmp & MSIF_SYSTEM_RESET);
+}
+
 static void msif_set_clock(unsigned int clock)
 {
 	unsigned int val;
@@ -92,86 +124,45 @@ static void msif_reset_sub_C286C4(void)
 	}
 
 	/* sub_C2AD1C */
-	tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x0C);
-	tmp |= 0x8000;
-	writew(tmp, MSIF_BASE_ADDR + 0x30 + 0x0C);
+	tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	tmp |= MSIF_SYSTEM_RESET;
+	writew(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 
-	while (1) {
-		tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x0C);
-		if (!(tmp & 0x8000)) {
-			tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x0C);
-			/*
-			 * Enabling this doesn't work.
-			tmp &= 0xFFF8;
-			tmp |= 0x4005;
-			*/
-			writew(tmp, MSIF_BASE_ADDR + 0x30 + 0x0C);
-			break;
-		}
-	}
+	ms_wait_not_reset();
+
+	tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	/*
+	 * Enabling this doesn't work.
+	tmp &= 0xFFF8;
+	tmp |= 0x4005;
+	*/
+	writew(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 }
 
 static int msif_sub_C2AD68(unsigned char read_addr, unsigned int read_size,
 			    unsigned char write_addr, unsigned int write_size)
 {
-	unsigned short tmp;
 	unsigned int data = (read_addr << 0) | (read_size << 8) |
 			    (write_addr << 16) | (write_size << 24);
 
-	writew(0x8004, MSIF_BASE_ADDR + 0x30);
+	writew(MS_TPC_SET_RW_REG_ADRS | 4, MSIF_BASE_ADDR + MSIF_COMMAND_REG);
 
-	while (1) {
-		tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x08);
-		if (tmp & 0x4000)
-			break;
+	ms_wait_fifo_rw();
 
-		if (0) {
-			tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x0C);
-			tmp |= 0x8000;
-			writew(tmp, MSIF_BASE_ADDR + 0x30 + 0x0C);
+	writel(data, MSIF_BASE_ADDR + MSIF_DATA_REG);
+	writel(0, MSIF_BASE_ADDR + MSIF_DATA_REG);
 
-			while (1) {
-				tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x0C);
-				if (!(tmp & 0x8000))
-					break;
-			}
-
-			if (!(tmp & 0x8000)) {
-				tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x0C);
-				tmp &= 0xFFF8;
-				tmp |= 0x4005;
-				writew(tmp, MSIF_BASE_ADDR + 0x30 + 0x0C);
-				break;
-			}
-		}
-	}
-
-	writel(data, MSIF_BASE_ADDR + 0x30 + 0x04);
-	writel(0, MSIF_BASE_ADDR + 0x30 + 0x04);
-
-	while (1) {
-		tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x08);
-		if (tmp & 0x1300)
-			break;
-	}
-
-	if (!(tmp & 0x300))
-		return 0;
-
-	return -1;
+	return ms_wait_ready();
 }
 
 static void msif_sub_C2A940(unsigned int size, unsigned char *buff)
 {
 	while (size > 0) {
-		unsigned short tmp;
+		ms_wait_fifo_rw();
 
-		do {
-			tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x08);
-		} while (!(tmp & 0x4000));
+		*(unsigned int *)(buff + 0) = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
+		*(unsigned int *)(buff + 4) = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
 
-		*(unsigned int *)(buff + 0) = readl(MSIF_BASE_ADDR + 0x30 + 0x04);
-		*(unsigned int *)(buff + 4) = readl(MSIF_BASE_ADDR + 0x30 + 0x04);
 		buff += 8;
 		size -= 8;
 	}
@@ -179,22 +170,11 @@ static void msif_sub_C2A940(unsigned int size, unsigned char *buff)
 
 static int msif_sub_C2AB7C(unsigned int size, unsigned char *buff)
 {
-	unsigned short tmp;
-
-	writew((size & 0x7FF) | 0x4000, MSIF_BASE_ADDR + 0x30);
+	writew(MS_TPC_READ_REG | (size & 0x7FF), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
 
 	msif_sub_C2A940(size, buff);
 
-	while (1) {
-		tmp = readw(MSIF_BASE_ADDR + 0x30 + 0x08);
-		if (tmp & 0x1300)
-			break;
-	}
-
-	if (!(tmp & 0x300))
-		return 0;
-
-	return -1;
+	return ms_wait_ready();
 }
 
 static void msif_sub_C28CDC(unsigned char read_addr, unsigned int read_size, unsigned char *buff)
