@@ -30,6 +30,8 @@
 #define MS_TPC_WRITE_LONG_DATA	0xD000
 #define MS_TPC_SET_CMD		0xE000
 
+#define MS_PARAM_REG_SYS_PARAM	0x10
+
 #define MS_INT_REG_CMDNK	0x01
 #define MS_INT_REG_BREQ		0x20
 #define MS_INT_REG_ERR		0x40
@@ -41,6 +43,10 @@
 #define MSPRO_CMD_STOP		0x25
 
 #define MS_STATUS_WP		0x01
+
+#define MS_SYS_PAR4		0x00
+#define MS_SYS_PAR8		0x40
+#define MS_SYS_SERIAL		0x80
 
 struct ms_status_registers {
 	unsigned char reserved0;
@@ -105,11 +111,22 @@ static void ms_read_data(unsigned char *buff, unsigned int size)
 		buff += 8;
 		size -= 8;
 	}
+
+	if (size > 0) {
+		unsigned char data[8];
+
+		ms_wait_fifo_rw();
+
+		*(unsigned int *)&data[0] = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
+		*(unsigned int *)&data[4] = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
+
+		memcpy(buff, data, size);
+	}
 }
 
 static void ms_write_data(const unsigned char *buff, unsigned int size)
 {
-	while (size > 0) {
+	while (size > 8) {
 		ms_wait_fifo_rw();
 
 		writel(*(unsigned int *)&buff[0], MSIF_BASE_ADDR + MSIF_DATA_REG);
@@ -118,20 +135,31 @@ static void ms_write_data(const unsigned char *buff, unsigned int size)
 		buff += 8;
 		size -= 8;
 	}
+
+	if (size > 0) {
+		unsigned char data[8];
+
+		ms_wait_fifo_rw();
+
+		memcpy(data, buff, size);
+		memset(&data[size], 0, sizeof(data) - size);
+
+		writel(*(unsigned int *)&data[0], MSIF_BASE_ADDR + MSIF_DATA_REG);
+		writel(*(unsigned int *)&data[4], MSIF_BASE_ADDR + MSIF_DATA_REG);
+	}
 }
 
 static int ms_tpc_set_rw_regs_adrs(unsigned char read_addr, unsigned int read_size,
-			       unsigned char write_addr, unsigned int write_size)
+				   unsigned char write_addr, unsigned int write_size)
 {
-	unsigned char buff[8];
+	unsigned char buff[4];
 
 	buff[0] = read_addr;
 	buff[1] = read_size;
 	buff[2] = write_addr;
 	buff[3] = write_size;
-	memset(&buff[4], 0, 4 * sizeof(*buff));
 
-	writew(MS_TPC_SET_RW_REG_ADRS | 4, MSIF_BASE_ADDR + MSIF_COMMAND_REG);
+	writew(MS_TPC_SET_RW_REG_ADRS | sizeof(buff), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
 
 	ms_write_data(buff, sizeof(buff));
 
@@ -143,6 +171,15 @@ static int ms_tpc_read_reg(unsigned char *buff, unsigned int size)
 	writew(MS_TPC_READ_REG | (size & 0x7FF), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
 
 	ms_read_data(buff, size);
+
+	return ms_wait_ready();
+}
+
+static int ms_tpc_write_reg(const unsigned char *buff, unsigned int size)
+{
+	writew(MS_TPC_WRITE_REG | (size & 0x7FF), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
+
+	ms_write_data(buff, size);
 
 	return ms_wait_ready();
 }
@@ -183,19 +220,61 @@ static void ms_reg_int_wait_breq(void)
 	} while ((ret < 0) || !(reg_int & MS_INT_REG_BREQ));
 }
 
-
-static void msif_set_clock(unsigned int clock)
+static void msif_set_clock_for_bus_mode(unsigned int bus_mode)
 {
-	unsigned int val;
+	unsigned int clock;
 
-	if (clock == 1)
-		val = 4;
-	else if (clock <= 4)
-		val = 5;
+	if (bus_mode == 1)
+		clock = 4;
+	else if (bus_mode <= 4)
+		clock = 5;
 	else
-		val = 6;
+		clock = 6;
 
-	pervasive_msif_set_clock(val);
+	pervasive_msif_set_clock(clock);
+}
+
+static void msif_set_bus_mode(unsigned int bus_mode)
+{
+	unsigned short val;
+
+	val = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+
+	if (bus_mode == 1)
+		val = (val & 0xFFBF) | 0x80;
+	else if (bus_mode == 5)
+		val = (val & 0xFF7F) | 0x40;
+	else
+		val = val & 0xFF3F;
+
+	writew(val, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+
+	msif_set_clock_for_bus_mode(bus_mode);
+}
+
+static void ms_set_bus_mode(unsigned int bus_mode)
+{
+	unsigned char system;
+
+	switch (bus_mode) {
+	case 0:
+	case 2:
+		system = MS_SYS_PAR8;
+		break;
+	case 1:
+		system = MS_SYS_SERIAL;
+		break;
+	case 3:
+		system = MS_SYS_SERIAL | 8;
+		break;
+	case 4:
+		system = MS_SYS_PAR4;
+		break;
+	}
+
+	ms_tpc_set_rw_regs_adrs(0, 0, MS_PARAM_REG_SYS_PARAM, 1);
+	ms_tpc_write_reg(&system, sizeof(system));
+	msif_set_bus_mode(bus_mode);
 }
 
 static void msif_reg_0x100_mask_sub_C2868C(unsigned int val, unsigned int mask)
@@ -220,7 +299,7 @@ static void msif_reset_sub_C286C4(void)
 	unsigned int val;
 	unsigned short tmp;
 
-	msif_set_clock(1);
+	msif_set_clock_for_bus_mode(1);
 
 	/* sub_C28A74 */
 	val = readl(MSIF_BASE_ADDR + 0x30 + 0x70);
@@ -250,11 +329,13 @@ static void msif_reset_sub_C286C4(void)
 
 	tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 	/*
-	 * Enabling this doesn't work.
+	 * Enabling this doesn't work. Default value = 0x20A5.
 	tmp &= 0xFFF8;
 	tmp |= 0x4005;
 	*/
 	writew(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+
+	ms_reg_int_wait_ced();
 }
 
 static void ms_read_reg(unsigned char read_addr, unsigned int read_size, unsigned char *buff)
@@ -367,6 +448,11 @@ void msif_init1(void)
 	if (((tmp1 & 0xF0) == 0x10) || ((tmp1 & 0xF0) == 0x20)) {
 		/* TODO: sub_C280CC */
 	}
+
+	/*
+	 * Switch to parallel 4 mode.
+	 */
+	ms_set_bus_mode(4);
 }
 
 void msif_init2(struct msif_init2_arg *arg)
@@ -377,9 +463,9 @@ void msif_init2(struct msif_init2_arg *arg)
 void msif_read_sector(unsigned int sector, unsigned char *buff)
 {
 	const unsigned int count = 1;
-	unsigned char data[8];
+	unsigned char data[7];
 
-	writew(MS_TPC_EX_SET_CMD | 7, MSIF_BASE_ADDR + MSIF_COMMAND_REG);
+	writew(MS_TPC_EX_SET_CMD | sizeof(data), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
 
 	data[0] = MSPRO_CMD_READ_DATA;
 	data[1] = (count >> 8) & 0xFF;
@@ -388,7 +474,37 @@ void msif_read_sector(unsigned int sector, unsigned char *buff)
 	data[4] = (sector >> 16) & 0xFF;
 	data[5] = (sector >> 8) & 0xFF;
 	data[6] = sector & 0xFF;
-	data[7] = 0;
+
+	ms_write_data(data, sizeof(data));
+
+	ms_wait_ready();
+	ms_wait_unk1();
+	ms_reg_int_wait_breq();
+
+	writew(MS_TPC_READ_LONG_DATA | (count * MS_SECTOR_SIZE),
+	       MSIF_BASE_ADDR + MSIF_COMMAND_REG);
+
+	ms_read_data(buff, count * MS_SECTOR_SIZE);
+
+	ms_wait_ready();
+	ms_wait_unk1();
+	ms_reg_int_wait_ced();
+}
+
+void msif_read_atrb(unsigned int address, unsigned char *buff)
+{
+	const unsigned int count = 1;
+	unsigned char data[7];
+
+	writew(MS_TPC_EX_SET_CMD | sizeof(data), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
+
+	data[0] = MSPRO_CMD_READ_ATRB;
+	data[1] = (count >> 8) & 0xFF;
+	data[2] = count & 0xFF;
+	data[3] = (address >> 24) & 0xFF;
+	data[4] = (address >> 16) & 0xFF;
+	data[5] = (address >> 8) & 0xFF;
+	data[6] = address & 0xFF;
 
 	ms_write_data(data, sizeof(data));
 
