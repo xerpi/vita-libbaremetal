@@ -1,9 +1,11 @@
 #ifndef MSIF_H
 #define MSIF_H
 
+#define MS_SECTOR_SIZE	512
+
 struct msif_init2_arg {
 	unsigned int unk00;
-	unsigned int unk04;
+	unsigned int write_protected;
 	unsigned int unk08;
 	unsigned int unk0C;
 	unsigned int unk10;
@@ -21,5 +23,6 @@ struct msif_init2_arg {
 void msif_init(void);
 void msif_init1(void);
 void msif_init2(struct msif_init2_arg *arg);
+void msif_read_sector(unsigned int sector, unsigned char *buff);
 
 #endif
