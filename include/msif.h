@@ -25,5 +25,7 @@ void msif_init1(void);
 void msif_init2(struct msif_init2_arg *arg);
 void msif_read_sector(unsigned int sector, unsigned char *buff);
 void msif_read_atrb(unsigned int address, unsigned char *buff);
+void msif_read_short_data(unsigned char cmd, unsigned char *buff, unsigned int size);
+void msif_write_short_data(unsigned char cmd, const unsigned char *buff, unsigned int size);
 
 #endif

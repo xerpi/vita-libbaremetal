@@ -31,6 +31,7 @@
 #define MS_TPC_SET_CMD		0xE000
 
 #define MS_PARAM_REG_SYS_PARAM	0x10
+#define MS_PARAM_REG_TPC_PARAM	0x17
 
 #define MS_INT_REG_CMDNK	0x01
 #define MS_INT_REG_BREQ		0x20
@@ -105,7 +106,7 @@ static void ms_wait_not_reset(void)
 	} while (tmp & MSIF_SYSTEM_RESET);
 }
 
-static void ms_read_data(void *buff, unsigned int size)
+static void ms_fifo_read(void *buff, unsigned int size)
 {
 	unsigned int data[2];
 	unsigned int *ptr = buff;
@@ -130,7 +131,7 @@ static void ms_read_data(void *buff, unsigned int size)
 	}
 }
 
-static void ms_write_data(const void *buff, unsigned int size)
+static void ms_fifo_write(const void *buff, unsigned int size)
 {
 	unsigned int data[2];
 	const unsigned int *ptr = buff;
@@ -167,7 +168,7 @@ static int ms_set_rw_reg_adrs(unsigned char read_addr, unsigned int read_size,
 	buff[3] = write_size;
 
 	ms_tpc(MS_TPC_SET_RW_REG_ADRS, sizeof(buff));
-	ms_write_data(buff, sizeof(buff));
+	ms_fifo_write(buff, sizeof(buff));
 
 	return ms_wait_ready();
 }
@@ -176,7 +177,7 @@ static int ms_read_reg(unsigned char addr, void *buff, unsigned int size)
 {
 	ms_set_rw_reg_adrs(addr, size, 0, 0);
 	ms_tpc(MS_TPC_READ_REG, size);
-	ms_read_data(buff, size);
+	ms_fifo_read(buff, size);
 	return ms_wait_ready();
 }
 
@@ -184,14 +185,14 @@ static int ms_write_reg(unsigned char addr, const void *buff, unsigned int size)
 {
 	ms_set_rw_reg_adrs(0, 0, addr, size);
 	ms_tpc(MS_TPC_WRITE_REG, size);
-	ms_write_data(buff, size);
+	ms_fifo_write(buff, size);
 	return ms_wait_ready();
 }
 
 static int ms_get_reg_int(unsigned char *reg_int)
 {
 	ms_tpc(MS_TPC_GET_INT, sizeof(*reg_int));
-	ms_read_data(reg_int, sizeof(*reg_int));
+	ms_fifo_read(reg_int, sizeof(*reg_int));
 	return ms_wait_ready();
 }
 
@@ -213,6 +214,26 @@ static void ms_reg_int_wait_breq(void)
 	do {
 		ret = ms_get_reg_int(&reg_int);
 	} while ((ret < 0) || !(reg_int & MS_INT_REG_BREQ));
+}
+
+static int ms_set_short_data_size(unsigned int size)
+{
+	unsigned char tpc_param;
+
+	if (size == 32)
+		tpc_param = 0;
+	else if (size == 64)
+		tpc_param = 1;
+	else if (size == 128)
+		tpc_param = 2;
+	else if (size == 256)
+		tpc_param = 3;
+	else
+		return -1;
+
+	ms_write_reg(MS_PARAM_REG_TPC_PARAM, &tpc_param, sizeof(tpc_param));
+
+	return 0;
 }
 
 static void msif_set_clock_for_bus_mode(unsigned int bus_mode)
@@ -249,25 +270,25 @@ static void msif_set_bus_mode(unsigned int bus_mode)
 
 static void ms_set_bus_mode(unsigned int bus_mode)
 {
-	unsigned char system;
+	unsigned char sys_param;
 
 	switch (bus_mode) {
 	case 0:
 	case 2:
-		system = MS_SYS_PAR8;
+		sys_param = MS_SYS_PAR8;
 		break;
 	case 1:
-		system = MS_SYS_SERIAL;
+		sys_param = MS_SYS_SERIAL;
 		break;
 	case 3:
-		system = MS_SYS_SERIAL | 8;
+		sys_param = MS_SYS_SERIAL | 8;
 		break;
 	case 4:
-		system = MS_SYS_PAR4;
+		sys_param = MS_SYS_PAR4;
 		break;
 	}
 
-	ms_write_reg(MS_PARAM_REG_SYS_PARAM, &system, sizeof(system));
+	ms_write_reg(MS_PARAM_REG_SYS_PARAM, &sys_param, sizeof(sys_param));
 	msif_set_bus_mode(bus_mode);
 }
 
@@ -338,7 +359,7 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 	unsigned int type;
 	struct ms_status_registers status;
 
-	ms_read_reg(0, (unsigned char *)&status, sizeof(status));
+	ms_read_reg(0, &status, sizeof(status));
 
 	if (status.status & MS_STATUS_WP) {
 		*write_protected = 1;
@@ -459,14 +480,14 @@ void msif_read_sector(unsigned int sector, unsigned char *buff)
 	data[6] = sector & 0xFF;
 
 	ms_tpc(MS_TPC_EX_SET_CMD, sizeof(data));
-	ms_write_data(data, sizeof(data));
+	ms_fifo_write(data, sizeof(data));
 
 	ms_wait_ready();
 	ms_wait_unk1();
 	ms_reg_int_wait_breq();
 
 	ms_tpc(MS_TPC_READ_LONG_DATA, count * MS_SECTOR_SIZE);
-	ms_read_data(buff, count * MS_SECTOR_SIZE);
+	ms_fifo_read(buff, count * MS_SECTOR_SIZE);
 
 	ms_wait_ready();
 	ms_wait_unk1();
@@ -487,14 +508,54 @@ void msif_read_atrb(unsigned int address, unsigned char *buff)
 	data[6] = address & 0xFF;
 
 	ms_tpc(MS_TPC_EX_SET_CMD, sizeof(data));
-	ms_write_data(data, sizeof(data));
+	ms_fifo_write(data, sizeof(data));
 
 	ms_wait_ready();
 	ms_wait_unk1();
 	ms_reg_int_wait_breq();
 
 	ms_tpc(MS_TPC_READ_LONG_DATA, count * MS_SECTOR_SIZE);
-	ms_read_data(buff, count * MS_SECTOR_SIZE);
+	ms_fifo_read(buff, count * MS_SECTOR_SIZE);
+
+	ms_wait_ready();
+	ms_wait_unk1();
+	ms_reg_int_wait_ced();
+}
+
+void msif_read_short_data(unsigned char cmd, unsigned char *buff, unsigned int size)
+{
+	if (ms_set_short_data_size(size))
+		return;
+
+	ms_tpc(MS_TPC_SET_CMD, sizeof(cmd));
+	ms_fifo_write(&cmd, sizeof(cmd));
+
+	ms_wait_ready();
+	ms_wait_unk1();
+	ms_reg_int_wait_breq();
+
+	ms_tpc(MS_TPC_READ_SHORT_DATA, size);
+	ms_fifo_read(buff, size);
+
+	ms_wait_ready();
+	ms_wait_unk1();
+	ms_reg_int_wait_ced();
+}
+
+void msif_write_short_data(unsigned char cmd, const unsigned char *buff, unsigned int size)
+{
+	if (ms_set_short_data_size(size))
+		return;
+
+	ms_tpc(MS_TPC_SET_CMD, sizeof(cmd));
+	ms_fifo_write(&cmd, sizeof(cmd));
+
+	ms_wait_ready();
+	ms_wait_unk1();
+	ms_reg_int_wait_breq();
+
+	ms_tpc(MS_TPC_WRITE_SHORT_DATA, size);
+	ms_fifo_write(buff, size);
 
 	ms_wait_ready();
 	ms_wait_unk1();
