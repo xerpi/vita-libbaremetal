@@ -23,8 +23,13 @@ struct dsi_timing_subinfo {
 	struct dsi_timing_subsubinfo subsubinfo;
 };
 
+enum dsi_timing_info_flags {
+	DSI_TIMING_INFO_POL_POS	= 0 << 0,
+	DSI_TIMING_INFO_POL_NEG	= 1 << 0,
+};
+
 struct dsi_timing_info {
-	unsigned int flags;
+	unsigned int flags; /* enum dsi_timing_info_flags */
 	unsigned int pixelclock_24bpp;
 	const struct dsi_timing_subinfo *subinfo_24bpp;
 	unsigned int pixelclock_30bpp;
@@ -55,22 +60,22 @@ static const struct dsi_timing_subinfo stru_BD0AC4 = {0x1A60, 3, 0xB03,  3, {3, 
 static const struct dsi_timing_subinfo stru_BD0CF0 = {0x4876, 9, 0x1F09, 5, {0x709, 0x4871, 0xB,  1, 0x20}};
 static const struct dsi_timing_subinfo stru_BD0D4C = {0x488A, 9, 0x1F09, 5, {0x709, 0x4890, 0xB,  1, 0x20}};
 
-/*                                              flags pixelclk24 subinfo_24bpp pixelclk30 subinfo_30bpp hline  vline mode HFP   HSW   HBP   VFP  VSW VBP */
-static const struct dsi_timing_info stru_BD0D14 = {5,   0x223A1C, &stru_A19358, 0,        0,            0x41A, 0x252, 0, 0x14,  0x42,  4,    4,   4, 0x2A};
-static const struct dsi_timing_info stru_BD0BC8 = {5,   0x223A1C, &stru_A19358, 0,        0,            0x4E2, 0x252, 0, 0x14,  0x10A, 4,    4,   4, 0x2E};
-static const struct dsi_timing_info stru_BD0ED0 = {5,   0x223A1C, &stru_A19358, 0,        0,            0x55F, 0x237, 0, 0x14,  0x187, 4,    4,   4, 0xF};
-static const struct dsi_timing_info stru_BD0E60 = {0xF, 0x287CF3, &stru_BD0C5C, 0,        0,            0x594, 0x307, 0, 0x72,  8,     0x18, 4,   4, 0x2F};
-static const struct dsi_timing_info stru_BD0E98 = {1,   0x107AC0, &stru_BD0E04, 0x149970, &stru_BD0AC4, 0x35A, 0x20D, 0, 0x10,  0x3E,  0x3C, 9,   6, 0x1E}; // VIC 2/3
-static const struct dsi_timing_info stru_BD0E28 = {1,   0x107AC0, &stru_BD0E04, 0x149970, &stru_BD0AC4, 0x35A, 0x20E, 0, 0x10,  0x3E,  0x3C, 0xA, 6, 0x1E};
-static const struct dsi_timing_info stru_BD0DCC = {1,   0x107AC0, &stru_BD0E04, 0x149970, &stru_BD0AC4, 0x360, 0x271, 0, 0xC,   0x40,  0x44, 5,   5, 0x27};
-static const struct dsi_timing_info stru_BD0B90 = {1,   0x107AC0, &stru_BD0E04, 0x149970, &stru_BD0AC4, 0x360, 0x272, 0, 0xC,   0x40,  0x44, 6,   5, 0x28};
-static const struct dsi_timing_info stru_BD0CB8 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x898, 0x465, 1, 0x58,  0x2C,  0x94, 2,   5, 0x10};
-static const struct dsi_timing_info stru_BD0B58 = {0,   0x2D5190, &stru_BD0B34, 0x38A5F4, &stru_BD0D4C, 0xA50, 0x465, 1, 0x210, 0x2C,  0x94, 2,   5, 0x10};
-static const struct dsi_timing_info stru_BD0F68 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x672, 0x2EE, 0, 0x6E,  0x28,  0xDC, 5,   5, 0x14}; // VIC 4
-static const struct dsi_timing_info stru_BD0D70 = {0,   0x2D5190, &stru_BD0B34, 0x38A5F4, &stru_BD0D4C, 0x7BC, 0x2EE, 0, 0x1B8, 0x28,  0xDC, 5,   5, 0x14};
-static const struct dsi_timing_info stru_BD0C80 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0x898, 0x465, 0, 0x58,  0x2C,  0x94, 4,   5, 0x24};
-static const struct dsi_timing_info stru_BD0A8C = {0,   0x2D5190, &stru_BD0B34, 0x38A5F4, &stru_BD0D4C, 0xA50, 0x465, 0, 0x210, 0x2C,  0x94, 4,   5, 0x24};
-static const struct dsi_timing_info stru_BD0AE8 = {0,   0x2D45F9, &stru_BD0C00, 0x389777, &stru_BD0CF0, 0xABE, 0x465, 0, 0x27E, 0x2C,  0x94, 4,   5, 0x24};
+/*                                               flags pixelclk24 subinfo_24  pixelclk30 subinfo_30  hline vline mode HFP  HSW HBP  VFP VSW VBP */
+static const struct dsi_timing_info stru_BD0D14 = {5,   2243100, &stru_A19358, 0,       0,            1050, 594,  0,  20,  66,  4,   4,  4, 42}; /* 960x544p */
+static const struct dsi_timing_info stru_BD0BC8 = {5,   2243100, &stru_A19358, 0,       0,            1250, 594,  0,  20,  266, 4,   4,  4, 46}; /* 960x540p */
+static const struct dsi_timing_info stru_BD0ED0 = {5,   2243100, &stru_A19358, 0,       0,            1375, 567,  0,  20,  391, 4,   4,  4, 15}; /* 960x544p */
+static const struct dsi_timing_info stru_BD0E60 = {0xF, 2653427, &stru_BD0C5C, 0,       0,            1428, 775,  0,  114, 8,   24,  4,  4, 47}; /* 1280x720p */
+static const struct dsi_timing_info stru_BD0E98 = {1,   1080000, &stru_BD0E04, 1350000, &stru_BD0AC4, 858,  525,  0,  16,  62,  60,  9,  6, 30}; /* 720x480p @ 60Hz (VIC 2/3) */
+static const struct dsi_timing_info stru_BD0E28 = {1,   1080000, &stru_BD0E04, 1350000, &stru_BD0AC4, 858,  526,  0,  16,  62,  60,  10, 6, 30}; /* 720x480p */
+static const struct dsi_timing_info stru_BD0DCC = {1,   1080000, &stru_BD0E04, 1350000, &stru_BD0AC4, 864,  625,  0,  12,  64,  68,  5,  5, 39}; /* 720x576p @ 50Hz (VIC 17/18)*/
+static const struct dsi_timing_info stru_BD0B90 = {1,   1080000, &stru_BD0E04, 1350000, &stru_BD0AC4, 864,  626,  0,  12,  64,  68,  6,  5, 40}; /* 720x575p */
+static const struct dsi_timing_info stru_BD0CB8 = {0,   2967033, &stru_BD0C00, 3708791, &stru_BD0CF0, 2200, 1125, 1,  88,  44,  148, 2,  5, 16}; /* 1920x1080i @ 60Hz (VIC 5) */
+static const struct dsi_timing_info stru_BD0B58 = {0,   2970000, &stru_BD0B34, 3712500, &stru_BD0D4C, 2640, 1125, 1,  528, 44,  148, 2,  5, 16}; /* 1920x1080i @ 50Hz (VIC 20) */
+static const struct dsi_timing_info stru_BD0F68 = {0,   2967033, &stru_BD0C00, 3708791, &stru_BD0CF0, 1650, 750,  0,  110, 40,  220, 5,  5, 20}; /* 1280x720p @ 60Hz (VIC 4) */
+static const struct dsi_timing_info stru_BD0D70 = {0,   2970000, &stru_BD0B34, 3712500, &stru_BD0D4C, 1980, 750,  0,  440, 40,  220, 5,  5, 20}; /* 1280x720p @ 50Hz (VIC 19) */
+static const struct dsi_timing_info stru_BD0C80 = {0,   2967033, &stru_BD0C00, 3708791, &stru_BD0CF0, 2200, 1125, 0,  88,  44,  148, 4,  5, 36}; /* 1920x1080p @ 60Hz (VIC 16) */
+static const struct dsi_timing_info stru_BD0A8C = {0,   2970000, &stru_BD0B34, 3712500, &stru_BD0D4C, 2640, 1125, 0,  528, 44,  148, 4,  5, 36}; /* 1920x1080p @ 50Hz (VIC 31) */
+static const struct dsi_timing_info stru_BD0AE8 = {0,   2967033, &stru_BD0C00, 3708791, &stru_BD0CF0, 2750, 1125, 0,  638, 44,  148, 4,  5, 36}; /* 1920x1080p @ 24Hz (VIC 32) */
 
 static struct {
 	unsigned int vic;
