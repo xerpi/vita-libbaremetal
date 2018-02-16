@@ -38,15 +38,7 @@ struct iftu_csc_params {
 	unsigned int unk0C;
 	unsigned int unk10;
 	unsigned int unk14;
-	unsigned int csc_rr;
-	unsigned int csc_rg;
-	unsigned int csc_rb;
-	unsigned int csc_gr;
-	unsigned int csc_gg;
-	unsigned int csc_gb;
-	unsigned int csc_br;
-	unsigned int csc_bg;
-	unsigned int csc_bb;
+	unsigned int ctm[3][3]; /* S3.9 fixed point format */
 };
 
 void iftu_bus_enable(enum iftu_bus bus);

@@ -121,15 +121,15 @@ void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane, const struct 
 
 	writel(csc->unk00, regs + IFTU_PLANE_CSC_UNK_104);
 	writel(csc->unk04, regs + IFTU_PLANE_CSC_UNK_108);
-	writel(csc->csc_rr, regs + IFTU_PLANE_CSC_RR_0);
-	writel(csc->csc_rg, regs + IFTU_PLANE_CSC_RG_0);
-	writel(csc->csc_rb, regs + IFTU_PLANE_CSC_RB_0);
-	writel(csc->csc_gr, regs + IFTU_PLANE_CSC_GR_0);
-	writel(csc->csc_gg, regs + IFTU_PLANE_CSC_GG_0);
-	writel(csc->csc_gb, regs + IFTU_PLANE_CSC_GB_0);
-	writel(csc->csc_br, regs + IFTU_PLANE_CSC_BR_0);
-	writel(csc->csc_bg, regs + IFTU_PLANE_CSC_BG_0);
-	writel(csc->csc_bb, regs + IFTU_PLANE_CSC_BB_0);
+	writel(csc->ctm[0][0], regs + IFTU_PLANE_CSC_RR_0);
+	writel(csc->ctm[0][1], regs + IFTU_PLANE_CSC_RG_0);
+	writel(csc->ctm[0][2], regs + IFTU_PLANE_CSC_RB_0);
+	writel(csc->ctm[1][0], regs + IFTU_PLANE_CSC_GR_0);
+	writel(csc->ctm[1][1], regs + IFTU_PLANE_CSC_GG_0);
+	writel(csc->ctm[1][2], regs + IFTU_PLANE_CSC_GB_0);
+	writel(csc->ctm[2][0], regs + IFTU_PLANE_CSC_BR_0);
+	writel(csc->ctm[2][1], regs + IFTU_PLANE_CSC_BG_0);
+	writel(csc->ctm[2][2], regs + IFTU_PLANE_CSC_BB_0);
 
 	dmb();
 }
@@ -140,15 +140,15 @@ void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct 
 
 	writel(csc->unk00, regs + IFTU_PLANE_CSC_UNK_130);
 	writel(csc->unk04, regs + IFTU_PLANE_CSC_UNK_134);
-	writel(csc->csc_rr, regs + IFTU_PLANE_CSC_RR_1);
-	writel(csc->csc_rg, regs + IFTU_PLANE_CSC_RG_1);
-	writel(csc->csc_rb, regs + IFTU_PLANE_CSC_RB_1);
-	writel(csc->csc_gr, regs + IFTU_PLANE_CSC_GR_1);
-	writel(csc->csc_gg, regs + IFTU_PLANE_CSC_GG_1);
-	writel(csc->csc_gb, regs + IFTU_PLANE_CSC_GB_1);
-	writel(csc->csc_br, regs + IFTU_PLANE_CSC_BR_1);
-	writel(csc->csc_bg, regs + IFTU_PLANE_CSC_BG_1);
-	writel(csc->csc_bb, regs + IFTU_PLANE_CSC_BB_1);
+	writel(csc->ctm[0][0], regs + IFTU_PLANE_CSC_RR_1);
+	writel(csc->ctm[0][1], regs + IFTU_PLANE_CSC_RG_1);
+	writel(csc->ctm[0][2], regs + IFTU_PLANE_CSC_RB_1);
+	writel(csc->ctm[1][0], regs + IFTU_PLANE_CSC_GR_1);
+	writel(csc->ctm[1][1], regs + IFTU_PLANE_CSC_GG_1);
+	writel(csc->ctm[1][2], regs + IFTU_PLANE_CSC_GB_1);
+	writel(csc->ctm[2][0], regs + IFTU_PLANE_CSC_BR_1);
+	writel(csc->ctm[2][1], regs + IFTU_PLANE_CSC_BG_1);
+	writel(csc->ctm[2][2], regs + IFTU_PLANE_CSC_BB_1);
 	writel(csc->unk08, regs + IFTU_PLANE_CSC_UNK_15C);
 	writel(csc->unk0C, regs + IFTU_PLANE_CSC_UNK_160);
 	writel(csc->unk10, regs + IFTU_PLANE_CSC_UNK_164);

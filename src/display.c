@@ -7,12 +7,62 @@
 
 #define FB_ADDR	0x20000000
 
-static const struct iftu_csc_params csc_identity_matrix_C01724 = {0,    0,     0x3FF, 0,    0x3FF, 0,    0x200, 0, 0,     0,     0x200, 0,     0,     0,     0x200};
-static const struct iftu_csc_params csc_identity_matrix_C019AC = {0,    0,     0x3FF, 0,    0x3FF, 0,    0x200, 0, 0,     0,     0x200, 0,     0,     0,     0x200};
-static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0177C   = {0x40, 0x202, 0x3FF, 0,    0,     0,    0x254, 0, 0x395, 0x254, 0xF93, 0xEF0, 0x254, 0x439, 0};
-static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0180C   = {0x40, 0x202, 0x3FF, 0,    0,     0,    0x254, 0, 0x395, 0x254, 0xF93, 0xEF0, 0x254, 0x439, 0};
-static const struct iftu_csc_params YPbPr_to_RGB_HDTV_C017D0   = {0,    0x202, 0x3FF, 0,    0,     0,    0x200, 0, 0x326, 0x200, 0xFA1, 0xF11, 0x200, 0x3B6, 0};
-static const struct iftu_csc_params stru_C01970                = {0x40, 0x40,  0x3AC, 0x40, 0x3AC, 0x40, 0x1B7, 0, 0,     0,     0x1B7, 0,     0,     0,     0x1B7};
+static const struct iftu_csc_params csc_identity_matrix_C01724 = {
+	0,     0, 0x3FF,
+	0, 0x3FF,     0,
+	{
+		{0x200,     0,     0},
+		{    0, 0x200,     0},
+		{    0,     0, 0x200}
+	}
+};
+
+static const struct iftu_csc_params csc_identity_matrix_C019AC = {
+	0,     0, 0x3FF,
+	0, 0x3FF,     0,
+	{
+		{0x200,     0,     0},
+		{    0, 0x200,     0},
+		{    0,     0, 0x200}
+	}
+};
+
+static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0177C = {
+	0x40, 0x202, 0x3FF,
+	   0,     0,     0,
+	{
+		{0x254,     0, 0x395},
+		{0x254, 0xF93, 0xEF0},
+		{0x254, 0x439,     0}
+	}
+};
+static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0180C = {
+	0x40, 0x202, 0x3FF,
+	   0,     0,     0,
+	{
+		{0x254,     0, 0x395},
+		{0x254, 0xF93, 0xEF0},
+		{0x254, 0x439,     0}
+	}
+};
+static const struct iftu_csc_params YPbPr_to_RGB_HDTV_C017D0 = {
+	0, 0x202, 0x3FF,
+	0,     0,     0,
+	{
+		{0x200,     0, 0x326},
+		{0x200, 0xFA1, 0xF11},
+		{0x200, 0x3B6,     0}
+	}
+};
+static const struct iftu_csc_params stru_C01970 = {
+	0x40,  0x40, 0x3AC,
+	0x40, 0x3AC,  0x40,
+	{
+		{0x1B7,     0,     0},
+		{    0, 0x1B7,     0},
+		{    0,     0, 0x1B7}
+	}
+};
 
 static struct display_config current_config;
 
