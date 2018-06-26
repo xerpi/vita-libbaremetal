@@ -105,12 +105,6 @@ static void hdmi_update_bits(unsigned char addr, unsigned char reg,
 
 int hdmi_init(void)
 {
-	static const unsigned char clock_div_by_lanes[] = { 6, 4, 3 }; /* 2, 3, 4 lanes */
-	static const unsigned int lanes = 3;
-
-	int i;
-	unsigned char status;
-
 	pervasive_hdmi_cec_set_enabled(1);
 
 	syscon_set_hdmi_cdc_hpd(1);
@@ -122,9 +116,21 @@ int hdmi_init(void)
 	hdmi_write(HDMI_I2C_ADDR, ADV7533_REG_CEC_I2C_ADDR,
 		     HDMI_I2C_CEC_ADDR);
 
-	do {
-		status = hdmi_read(HDMI_I2C_ADDR, ADV7533_REG_STATUS);
-	} while (!(status & ADV7533_STATUS_HPD));
+	return 0;
+}
+
+int hdmi_get_hpd_state(void)
+{
+	return !!(hdmi_read(HDMI_I2C_ADDR, ADV7533_REG_STATUS) & ADV7533_STATUS_HPD);
+}
+
+int hdmi_connect(void)
+{
+	static const unsigned char clock_div_by_lanes[] = { 6, 4, 3 }; /* 2, 3, 4 lanes */
+	static const unsigned int lanes = 3;
+
+	int i;
+	unsigned char status;
 
 	hdmi_update_bits(HDMI_I2C_ADDR, ADV7533_REG_POWER,
 			   ADV7533_POWER_POWER_DOWN, 0);

@@ -173,6 +173,9 @@ static void display_init_hdmi(void)
 	dsi_unk(DSI_BUS_HDMI, vic, 0);
 
 	hdmi_init();
+
+	if (hdmi_get_hpd_state())
+		hdmi_connect();
 }
 
 void display_init(enum display_type type)
