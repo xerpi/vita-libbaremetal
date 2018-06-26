@@ -36,6 +36,7 @@ static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0177C = {
 		{0x254, 0x439,     0}
 	}
 };
+
 static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0180C = {
 	0x40, 0x202, 0x3FF,
 	   0,     0,     0,
@@ -45,6 +46,7 @@ static const struct iftu_csc_params YCbCr_to_RGB_HDTV_C0180C = {
 		{0x254, 0x439,     0}
 	}
 };
+
 static const struct iftu_csc_params YPbPr_to_RGB_HDTV_C017D0 = {
 	0, 0x202, 0x3FF,
 	0,     0,     0,
@@ -54,6 +56,7 @@ static const struct iftu_csc_params YPbPr_to_RGB_HDTV_C017D0 = {
 		{0x200, 0x3B6,     0}
 	}
 };
+
 static const struct iftu_csc_params stru_C01970 = {
 	0x40,  0x40, 0x3AC,
 	0x40, 0x3AC,  0x40,

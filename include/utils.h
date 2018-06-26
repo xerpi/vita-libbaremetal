@@ -45,6 +45,25 @@ static inline void writel(unsigned int val, volatile void *addr)
 	*(unsigned int *)addr = val;
 }
 
+static inline unsigned int smc(unsigned int cmd, unsigned int arg1,
+			       unsigned int arg2, unsigned int arg3,
+			       unsigned int arg4)
+{
+	register unsigned int r0 asm("r0") = arg1;
+	register unsigned int r1 asm("r1") = arg1;
+	register unsigned int r2 asm("r2") = arg1;
+	register unsigned int r3 asm("r3") = arg1;
+	register unsigned int r12 asm("r12") = cmd;
+
+	asm volatile(
+		"smc #0\n\t"
+		: "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3)
+		: "r"(r12)
+	);
+
+	return r0;
+}
+
 void delay(int n);
 unsigned int get_cpu_id(void);
 

@@ -137,15 +137,9 @@ int syscon_init(void)
 	return 0;
 }
 
-void syscon_reset_device(int type, int unk)
+void syscon_reset_device(int type, int mode)
 {
-	asm volatile(
-		"mov r0, %0\n\t"
-		"mov r1, %0\n\t"
-		"ldr r12, =0x11A\n\t"
-		"smc #0\n\t"
-		: : "r"(type), "r"(unk) : "r12"
-	);
+	smc(0x11A, type, mode, 0, 0);
 }
 
 void syscon_set_hdmi_cdc_hpd(int enable)

@@ -79,7 +79,7 @@ int main(struct sysroot_buffer *sysroot)
 
 		ctrl_read(&ctrl);
 		if (CTRL_BUTTON_HELD(ctrl, CTRL_POWER))
-			syscon_reset_device(SYSCON_RESET_COLD_RESET, 0);
+			syscon_reset_device(SYSCON_RESET_TYPE_COLD_RESET, 2);
 
 		if (i++ % 10 < 5)
 			gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
