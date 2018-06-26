@@ -44,15 +44,6 @@ int main(struct sysroot_buffer *sysroot)
 	else
 		display_init(DISPLAY_TYPE_OLED);
 
-	draw_fill_screen(BLACK);
-	draw_rectangle(50, 50, 100, 100, RED);
-	draw_rectangle(50 + 150, 50, 100, 100, GREEN);
-	draw_rectangle(50 + 2 * 150, 50, 100, 100, BLUE);
-	font_draw_string(10, 10, WHITE, "Hello world from baremetal!");
-
-	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
-	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
-
 	if (pervasive_msif_get_card_insert_state()) {
 		struct msif_init2_arg arg;
 
@@ -62,7 +53,16 @@ int main(struct sysroot_buffer *sysroot)
 		msif_init2(&arg);
 	}
 
+	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
+	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
+
 	LOG("Init done!\n");
+
+	draw_fill_screen(BLACK);
+	draw_rectangle(50, 50, 100, 100, RED);
+	draw_rectangle(50 + 150, 50, 100, 100, GREEN);
+	draw_rectangle(50 + 2 * 150, 50, 100, 100, BLUE);
+	font_draw_string(10, 10, WHITE, "Hello world from baremetal!");
 
 	while (1) {
 		static int i = 0;
