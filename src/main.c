@@ -45,12 +45,14 @@ int main(struct sysroot_buffer *sysroot)
 		display_init(DISPLAY_TYPE_OLED);
 
 	if (pervasive_msif_get_card_insert_state()) {
-		struct msif_init2_arg arg;
-
 		msif_init();
 		syscon_msif_set_power(1);
-		msif_init1();
-		msif_init2(&arg);
+		msif_setup();
+		LOG("MS auth done!\n");
+
+		unsigned char sector[MS_SECTOR_SIZE];
+		msif_read_sector(0, sector);
+		LOG_BUFFER("MBR:", sector, MS_SECTOR_SIZE);
 	}
 
 	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);

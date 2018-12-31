@@ -5,12 +5,18 @@
 
 /* System support */
 #define MBEDTLS_HAVE_ASM
+#define MBEDTLS_PLATFORM_MEMORY
+#define MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
+#define MBEDTLS_PLATFORM_SNPRINTF_ALT
+#define MBEDTLS_PLATFORM_STD_SNPRINTF snprintf
 
 /* mbed TLS feature support */
 #define MBEDTLS_CIPHER_MODE_CBC
 #define MBEDTLS_PKCS1_V15
 
 /* mbed TLS modules */
+#define MBEDTLS_PLATFORM_C
+#define MBEDTLS_MEMORY_BUFFER_ALLOC_C
 #define MBEDTLS_AES_C
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_CIPHER_C
@@ -24,5 +30,8 @@
 #define MBEDTLS_SHA256_C
 
 #include "mbedtls/check_config.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 #endif /* MBEDTLS_CONFIG_H */

@@ -1,8 +1,18 @@
+/*
+ * For more information about the MC authentication process check:
+ *   https://github.com/motoharu-gosuto/psvcmd56/blob/master/src/CMD56Reversed/SceMsif.cpp
+ * and
+ *   https://wiki.henkaku.xyz/vita/Memory_Card
+ */
+
 #include <string.h>
 #include "msif.h"
 #include "pervasive.h"
 #include "sysroot.h"
 #include "utils.h"
+#include "mbedtls/cmac.h"
+#include "mbedtls/aes.h"
+#include "mbedtls/des.h"
 
 #define MSIF_BASE_ADDR		((void *)0xE0900000)
 
@@ -29,6 +39,11 @@
 #define MS_TPC_WRITE_SHORT_DATA	0xC000
 #define MS_TPC_WRITE_LONG_DATA	0xD000
 #define MS_TPC_SET_CMD		0xE000
+
+#define MS_TPC_MSIF_AUTH_48 0x48
+#define MS_TPC_MSIF_AUTH_49 0x49
+#define MS_TPC_MSIF_AUTH_4A 0x4A
+#define MS_TPC_MSIF_AUTH_4B 0x4B
 
 #define MS_PARAM_REG_SYS_PARAM	0x10
 #define MS_PARAM_REG_TPC_PARAM	0x17
@@ -58,6 +73,37 @@ struct ms_status_registers {
 	unsigned char reserved2;
 	unsigned char category;
 	unsigned char class;
+} __attribute__((packed));
+
+struct msif_auth_dmac5_41_req1 {
+	unsigned char f00d_1C_key[0x10];
+	unsigned char card_info[0x8];
+	unsigned char challenge[0x8];
+	unsigned char session_id[8];
+} __attribute__((packed));
+
+struct msif_auth_dmac5_41_req2 {
+	unsigned char session_id[0x8];
+	unsigned char challenge[0x8];
+} __attribute__((packed));
+
+struct msif_auth_tpc_cmd48_req {
+	unsigned char session_id[0x8];
+	unsigned char f00d_cmd1_data;
+	unsigned char reserved[0x17];
+} __attribute__((packed));
+
+struct msif_auth_tpc_cmd49_resp {
+	unsigned char f00d_1C_key[0x10];
+	unsigned char card_info[0x8];
+	unsigned char challenge[0x8];
+	unsigned char iv[0x08];
+	unsigned char reserved[0x18];
+} __attribute__((packed));
+
+struct msif_auth_tpc_cmd4A_req {
+	unsigned char iv[0x8];
+	unsigned char reserved[0x18];
 } __attribute__((packed));
 
 static inline void ms_tpc(unsigned int tpc, unsigned int size)
@@ -419,14 +465,188 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 	*model_name_type = type;
 }
 
-void msif_init1(void)
+static void aes_cbc_enc(void *dst, const void *src, const void *key, void *iv,
+		        unsigned int key_size, unsigned int size)
+{
+	mbedtls_aes_context aes;
+
+	mbedtls_aes_init(&aes);
+	mbedtls_aes_setkey_enc(&aes, key, key_size);
+	mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, size, iv, src, dst);
+	mbedtls_aes_free(&aes);
+}
+
+static void des3_cbc_cts_enc_iv_0(void *dst, const void *src, const void *key, unsigned int size)
+{
+	unsigned char iv[8];
+	mbedtls_des3_context des3;
+
+	memset(iv, 0, sizeof(iv));
+	mbedtls_des3_init(&des3);
+	mbedtls_des3_set3key_enc(&des3, key);
+	mbedtls_des3_crypt_cbc(&des3, MBEDTLS_DES_ENCRYPT, size, iv, src, dst);
+	mbedtls_des3_free(&des3);
+}
+
+static void msif_auth_derive_iv_tweak(const unsigned char *tweak_seed,
+				      unsigned char *tweak_key0,
+				      unsigned char *tweak_key1)
+{
+	uint64_t tmp;
+
+	tmp = be_uint64_t_load(tweak_seed) * 2;
+	be_uint64_t_store(tweak_key0, tmp);
+	tweak_key0[7] = ((tweak_seed[0] & 0x80) > 0) ? (tweak_key0[7] ^ 0x1B) : tweak_key0[7];
+
+	tmp = be_uint64_t_load(tweak_key0) * 2;
+	be_uint64_t_store(tweak_key1, tmp);
+	tweak_key1[7] = ((tweak_key0[0] & 0x80) > 0) ? (tweak_key1[7] ^ 0x1B) : tweak_key1[7];
+}
+
+static void msif_auth_derive_iv(void *result, const void *data, const void *key, unsigned int size)
+{
+	unsigned char tweak_seed_enc[8];
+	unsigned char tweak_seed[8];
+	memset(tweak_seed, 0, sizeof(tweak_seed));
+	des3_cbc_cts_enc_iv_0(tweak_seed_enc, tweak_seed, key, 8);
+
+	unsigned int tweak_key0[2];
+	unsigned int tweak_key1[2];
+	msif_auth_derive_iv_tweak(tweak_seed_enc, (unsigned char *)tweak_key0,
+				  (unsigned char *)tweak_key1);
+	if (size <= 8)
+		return;
+
+	const unsigned int *current_ptr = data;
+	unsigned int current_size = size;
+
+	unsigned int IV[2];
+	memset(IV, 0, sizeof(IV));
+
+	while (current_size > 8) {
+		int current_round[2];
+		current_round[0] = current_ptr[0] ^ IV[0];
+		current_round[1] = current_ptr[1] ^ IV[1];
+
+		des3_cbc_cts_enc_iv_0(IV, current_round, key, 8);
+
+		current_ptr = current_ptr + 2;
+		current_size = current_size - 8;
+	}
+
+	unsigned int IV_mod[2];
+	unsigned int tail_data[2];
+
+	if (current_size == 8) {
+		tail_data[0] = current_ptr[0];
+		tail_data[1] = current_ptr[1];
+		IV_mod[0] = IV[0] ^ tweak_key0[0];
+		IV_mod[1] = IV[1] ^ tweak_key0[1];
+	} else {
+		tail_data[0] = current_ptr[0];
+		tail_data[1] = current_ptr[1];
+		memset(((char *)tail_data) + current_size, 0, 8 - current_size);
+		IV_mod[0] = IV[0] ^ tweak_key1[0];
+		IV_mod[1] = IV[1] ^ tweak_key1[1];
+	}
+
+	unsigned int final_round[2];
+	final_round[0] = tail_data[0] ^ IV_mod[0];
+	final_round[1] = tail_data[1] ^ IV_mod[1];
+
+	des3_cbc_cts_enc_iv_0(result, final_round, key, 8);
+}
+
+static void rmauth_cmd_0x1(unsigned int *res)
+{
+	*res = 0;
+}
+
+static void rmauth_cmd_0x2(const unsigned char seed[32], unsigned char out_key[32])
+{
+	static const unsigned char key[32] = {
+		0 /* Bring your own keys */
+	};
+
+	unsigned char iv[MBEDTLS_AES_BLOCK_SIZE];
+	unsigned char seed_trunc[16];
+
+	memcpy(seed_trunc, seed, 16);
+
+	memset(iv, 0, MBEDTLS_AES_BLOCK_SIZE);
+	aes_cbc_enc(&out_key[0], seed_trunc, &key[0], iv, 128, 16);
+
+	memset(iv, 0, MBEDTLS_AES_BLOCK_SIZE);
+	aes_cbc_enc(&out_key[16], seed_trunc, &key[16], iv, 128, 16);
+}
+
+static void get_random_data(unsigned char *buf, int size)
+{
+	memset(buf, 0, size);
+}
+
+static void msif_auth(unsigned int auth_val)
+{
+	unsigned char key_1C[32];
+
+	unsigned int f00d_cmd1_res;
+	rmauth_cmd_0x1(&f00d_cmd1_res);
+
+	unsigned char session_id[8];
+	get_random_data(session_id, sizeof(session_id));
+
+	/* Execute TPC cmd 0x48 - send request - establish session with memory card */
+	struct msif_auth_tpc_cmd48_req cmd48_req;
+	memcpy(cmd48_req.session_id, session_id, sizeof(session_id));
+	cmd48_req.f00d_cmd1_data = f00d_cmd1_res;
+	memset(cmd48_req.reserved, 0, 0x17);
+	msif_write_short_data(MS_TPC_MSIF_AUTH_48, &cmd48_req, 0x20);
+
+	/* Execute TPC cmd 0x49 - get response - result of establishing session with memory card */
+	struct msif_auth_tpc_cmd49_resp cmd49_resp;
+	memset(&cmd49_resp, 0, sizeof(cmd49_resp));
+	msif_read_short_data(MS_TPC_MSIF_AUTH_49, &cmd49_resp, 0x40);
+
+	/* Execute f00d rm_auth cmd 0x2, scrambles and sets the key into slot 0x1C */
+	rmauth_cmd_0x2(cmd49_resp.f00d_1C_key, key_1C);
+
+	/* Prepare 3des-cbc-cts (dmac5 cmd 0x41 request) data */
+	struct msif_auth_dmac5_41_req1 d5req1;
+	memcpy(d5req1.f00d_1C_key, cmd49_resp.f00d_1C_key, 0x10);
+	memcpy(d5req1.card_info, cmd49_resp.card_info, 0x8);
+	memcpy(d5req1.challenge, cmd49_resp.challenge, 0x8);
+	memcpy(d5req1.session_id, session_id, 0x8);
+
+	/* Encrypt prepared buffer with 3des-cbc-cts and obtain IV */
+	char des3_iv_1[0x8];
+	memset(des3_iv_1, 0, sizeof(des3_iv_1));
+	msif_auth_derive_iv(des3_iv_1, &d5req1, key_1C, 0x28);
+
+	/* Verify that IV matches to the one, given in TPC 0x49 response */
+	/* assert(memcmp(des3_iv_1, cmd49_resp.iv, 8) == 0) */
+
+	/* Prepare 3des-cbc-cts (dmac5 cmd 0x41 request) data */
+	struct msif_auth_dmac5_41_req2 d5req2;
+	memcpy(d5req2.session_id, d5req1.session_id, 8);
+	memcpy(d5req2.challenge, cmd49_resp.challenge, 8);
+
+	/* Encrypt prepared buffer with 3des-cbc-cts and obtain IV */
+	char des3_iv_2[0x8];
+	memset(des3_iv_2, 0, sizeof(des3_iv_2));
+	msif_auth_derive_iv(des3_iv_2, &d5req2, key_1C, 0x10);
+
+	/* Execute TPC cmd 0x4A - send request - complete auth */
+	struct msif_auth_tpc_cmd4A_req cmd4A_req;
+	memcpy(cmd4A_req.iv, des3_iv_2, 8);
+	memset(cmd4A_req.reserved, 0, 0x18);
+	msif_write_short_data(MS_TPC_MSIF_AUTH_4A, &cmd4A_req, 0x20);
+}
+
+void msif_setup(void)
 {
 	unsigned int misc_0x0000;
 	unsigned int hw_info_masked;
-	unsigned int model_name_type;
-	unsigned int unkC20 = 0;
-	unsigned int write_protected = 0;
-	unsigned int tmp1, tmp2 = 0, tmp3 = 0;
+	unsigned int model_name_type, unkC20, write_protected;
 
 	msif_reset_sub_C286C4();
 	ms_get_info(&model_name_type, &unkC20, &write_protected);
@@ -449,24 +669,23 @@ void msif_init1(void)
 		msif_reg_0x100_mask_sub_C2868C(0x300, 0xFFFF80FF);
 	}
 
-	ms_get_info(&tmp1, &tmp2, &tmp3);
-
-	if (((tmp1 & 0xF0) == 0x10) || ((tmp1 & 0xF0) == 0x20)) {
-		/* TODO: sub_C280CC */
-	}
-
 	/*
 	 * Switch to parallel 4 mode.
 	 */
 	ms_set_bus_mode(4);
+
+	if ((model_name_type & 0xF0) == 0x10)
+		msif_auth(2);
+	else if ((model_name_type & 0xF0) == 0x20)
+		msif_auth(5);
 }
 
-void msif_init2(struct msif_init2_arg *arg)
+void msif_get_info(struct msif_info *info)
 {
 	/* TODO */
 }
 
-void msif_read_sector(unsigned int sector, unsigned char *buff)
+void msif_read_sector(unsigned int sector, void *buff)
 {
 	const unsigned int count = 1;
 	unsigned char data[7];
@@ -494,7 +713,7 @@ void msif_read_sector(unsigned int sector, unsigned char *buff)
 	ms_reg_int_wait_ced();
 }
 
-void msif_read_atrb(unsigned int address, unsigned char *buff)
+void msif_read_atrb(unsigned int address, void *buff)
 {
 	const unsigned int count = 1;
 	unsigned char data[7];
@@ -522,7 +741,7 @@ void msif_read_atrb(unsigned int address, unsigned char *buff)
 	ms_reg_int_wait_ced();
 }
 
-void msif_read_short_data(unsigned char cmd, unsigned char *buff, unsigned int size)
+void msif_read_short_data(unsigned char cmd, void *buff, unsigned int size)
 {
 	if (ms_set_short_data_size(size))
 		return;
@@ -542,7 +761,7 @@ void msif_read_short_data(unsigned char cmd, unsigned char *buff, unsigned int s
 	ms_reg_int_wait_ced();
 }
 
-void msif_write_short_data(unsigned char cmd, const unsigned char *buff, unsigned int size)
+void msif_write_short_data(unsigned char cmd, const void *buff, unsigned int size)
 {
 	if (ms_set_short_data_size(size))
 		return;

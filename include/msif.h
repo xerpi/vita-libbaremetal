@@ -3,7 +3,7 @@
 
 #define MS_SECTOR_SIZE	512
 
-struct msif_init2_arg {
+struct msif_info {
 	unsigned int unk00;
 	unsigned int write_protected;
 	unsigned int unk08;
@@ -21,11 +21,11 @@ struct msif_init2_arg {
 };
 
 void msif_init(void);
-void msif_init1(void);
-void msif_init2(struct msif_init2_arg *arg);
-void msif_read_sector(unsigned int sector, unsigned char *buff);
-void msif_read_atrb(unsigned int address, unsigned char *buff);
-void msif_read_short_data(unsigned char cmd, unsigned char *buff, unsigned int size);
-void msif_write_short_data(unsigned char cmd, const unsigned char *buff, unsigned int size);
+void msif_setup(void);
+void msif_get_info(struct msif_info *info);
+void msif_read_sector(unsigned int sector, void *buff);
+void msif_read_atrb(unsigned int address, void *buff);
+void msif_read_short_data(unsigned char cmd, void *buff, unsigned int size);
+void msif_write_short_data(unsigned char cmd, const void *buff, unsigned int size);
 
 #endif

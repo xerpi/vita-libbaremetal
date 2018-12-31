@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdint.h>
+
 #define BIT(x)		(1 << (x))
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
@@ -43,6 +45,24 @@ static inline void writew(unsigned short val, volatile void *addr)
 static inline void writel(unsigned int val, volatile void *addr)
 {
 	*(unsigned int *)addr = val;
+}
+
+static inline uint64_t be_uint64_t_load(const void *addr)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	return __builtin_bswap64(*(uint64_t *)addr);
+#else
+	return *(uint64_t *)addr;
+#endif
+}
+
+static inline void be_uint64_t_store(void *addr, uint64_t val)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	*(uint64_t *)addr = __builtin_bswap64(val);
+#else
+	*(uint64_t *)addr = val;
+#endif
 }
 
 static inline unsigned int smc(unsigned int cmd, unsigned int arg1,
