@@ -172,7 +172,7 @@ void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
 	static const int pixel_size = 24;
 
 	unsigned int packet[64];
-	unsigned int packet_size;
+	unsigned int packet_length;
 	const struct dsi_timing_subinfo *subinfo;
 	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
 	volatile unsigned int *dsi_regs = DSI_REGS(bus);
@@ -195,7 +195,6 @@ void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
 	dsi_regs[0x250] = 0x200;
 	dsi_regs[0x251] = 0x200;
 	dsi_regs[0x252] = 0x200;
-
 	if (lanes == 3)
 		dsi_regs[0x253] = 0x200;
 
@@ -218,12 +217,17 @@ void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
 	}
 
 	unsigned int flags = timing_info->flags;
+	unsigned int mode = timing_info->mode;
+	unsigned int htotal = timing_info->htotal;
+	unsigned int vtotal = timing_info->vtotal;
 	unsigned int HFP = timing_info->HFP;
 	unsigned int HBP = timing_info->HBP;
 	unsigned int HSW = timing_info->HSW;
+	unsigned int hactive = htotal - (HFP + HSW + HBP);
 	unsigned int VFP = timing_info->VFP;
 	unsigned int VSW = timing_info->VSW;
 	unsigned int VBP = timing_info->VBP;
+	unsigned int vactive = vtotal - (VFP + VSW + VBP);
 
 	if (bus == 1) {
 		dsi_regs[0x20D] = 0xF;
@@ -232,462 +236,306 @@ void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
 		dsi_regs[0x145] = 0xFFFFFFFF;
 
 		if (unk07 == 1) {
-			unsigned int v81 = 0xA30000A2;
-			unsigned int v82 = timing_info->htotal - (timing_info->HBP + timing_info->HSW) - timing_info->HFP;
+			if (((flags << 0x1C) & 0x80000000) != 0)
+				hactive -= 2;
 
-			if (((timing_info->flags << 0x1C) & 0x80000000) != 0)
-				v82 -= 2;
-
-			unsigned int v86 = timing_info->vtotal - 2 - VSW - VBP - VFP;
-			unsigned int v89 = (768 * v82) & 0xFFFFFF;
-
+			packet[0] = 0x40effff;
 			if (lanes == 3)
-				v81 = 0xA30000A4;
-
-			packet[1] = 0x40EFFFF;
-			packet[2] = v81;
-			packet[3] = 0x28000004;
-			packet[4] = 0x10000001;
-			packet[5] = 0x28000001;
-			packet[6] = 0x10000021;
-			packet[7] = (VBP + VSW - 3) | 0x4010000;
-			packet[8] = 0x28000001;
-			packet[9] = 0x10000021;
-			packet[0xA] = 0x28000001;
-			packet[0xB] = 0x10000021;
-			packet[0xC] = 0x40005619;
-			packet[0xD] = v89 | 0x4000003E;
-			packet[0xE] = 0x40015019;
-			packet[0xF] = (v86 | 0x4000000) | 0x30000;
-			packet[0x10] = 0x10000021;
-			packet[0x11] = 0x40005619;
-			packet[0x12] = v89 | 0x4000003E;
-			packet[0x13] = 0x40015019;
-			packet[0x14] = 0x10000021;
-			packet[0x15] = (VFP - 2) | 0x4010000;
-			packet[0x16] = 0x28000001;
-			packet[0x17] = 0x10000021;
-			packet[0x18] = 0xC000000;
-
-			packet_size = 0x18;
-		} else {
-			if (timing_info->mode) {
-				unsigned int v61 = (unsigned int)(timing_info->vtotal + 1 - 2 * (VSW + timing_info->VFP + VBP)) >> 1;
-				unsigned int v62 = timing_info->htotal - (HSW + HBP) - timing_info->HFP;
-				unsigned int v63 = timing_info->flags & 2;
-				unsigned int v64 = timing_info->flags & 4;
-				unsigned int v65;
-				unsigned int v70;
-				unsigned int v98 = (v61 - 1) | 0x4050000;
-
-				if (v63)
-					v63 = pixel_size * HSW;
-				if (timing_info->flags & 2)
-					v63 = ((v63 >> 3) - 10) | 0x80000000;
-
-				if (v64)
-					v64 = pixel_size * HBP;
-
-				if (timing_info->flags & 4)
-					v64 = ((v64 >> 3) - 10) | 0x80000000;
-
-				if (lanes == 3)
-					v65 = 0xA30000A4;
-				else
-					v65 = 0xA30000A2;
-				packet[1] = 0x415FFFF;
-				packet[2] = v65;
-				packet[3] = 0x28800005;
-				packet[4] = 0x10000081;
-				if (v63) {
-					packet[5] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[6] = 0x100000B1;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[8] = 0x28000001;
-					packet[9] = 0x100000A1;
-					packet[0xA] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0xB] = 0x100000B1;
-					packet[0xC] = 0x28000008;
-					packet[0xD] = 0x10000091;
-					packet[0xE] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0xF] = 0x100000B1;
-					packet[0x10] = (VBP - 3) | 0x4030000;
-					packet[0x11] = 0x28000001;
-					packet[0x12] = 0x100000A1;
-					packet[0x13] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x14] = 0x100000B1;
-					packet[0x15] = (v61 - 1) | 0x4050000;
-					packet[0x16] = 0x28000001;
-					packet[0x17] = 0x100000A1;
-					packet[0x18] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-				} else {
-					packet[5] = 0x28000002;
-					packet[6] = 0x100000B1;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[8] = 0x28000001;
-					packet[9] = 0x100000A1;
-					packet[0xA] = 0x28000002;
-					packet[0xB] = 0x100000B1;
-					packet[0xC] = 0x28000008;
-					packet[0xD] = 0x10000091;
-					packet[0xE] = 0x28000002;
-					packet[0xF] = 0x100000B1;
-					packet[0x10] = (VBP - 3) | 0x4030000;
-					packet[0x11] = 0x28000001;
-					packet[0x12] = 0x100000A1;
-					packet[0x13] = 0x28000002;
-					packet[0x14] = 0x100000B1;
-					packet[0x15] = (v61 - 1) | 0x4050000;
-					packet[0x16] = 0x28000001;
-					packet[0x17] = 0x100000A1;
-					packet[0x18] = 0x28000002;
-				}
-
-				packet[0x19] = 0x100000B1;
-
-				unsigned int v66 = 0x28000010;
-				if (v64)
-					v66 = ((v64 << 8) & 0xFFFFFF) | 0x40000099;
-				packet[0x1A] = v66;
-
-				unsigned int v67;
-				if (pixel_size == 24)
-					v67 = ((768 * v62) & 0xFFFFFF) | 0x400000BE;
-				else
-					v67 = ((960 * v62) & 0xFFFF00) | 0x400000A9;
-
-				packet[0x1B] = v67;
-				packet[0x1C] = VFP | 0x4030000;
-				packet[0x1D] = 0x28000001;
-				packet[0x1E] = 0x100000A1;
-
-				if (v63) {
-					packet[0x1F] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x20] = 0x100000B1;
-					packet[0x21] = 0x28000004;
-					packet[0x22] = 0x100000C1;
-					packet[0x23] = (VSW - 1) | 0x4030000;
-					packet[0x24] = 0x28000001;
-					packet[0x25] = 0x100000A1;
-					packet[0x26] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x27] = 0x100000B1;
-					packet[0x28] = 0x28000008;
-					packet[0x29] = 0x100000D1;
-					packet[0x2A] = (VBP - 2) | 0x4030000;
-					packet[0x2B] = 0x28000001;
-					packet[0x2C] = 0x100000A1;
-					packet[0x2D] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-					packet[0x2E] = 0x100000B1;
-					packet[0x2F] = v98;
-					packet[0x30] = 0x28000001;
-					packet[0x31] = 0x100000A1;
-					packet[0x32] = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-				} else {
-					packet[0x1F] = 0x28000002;
-					packet[0x20] = 0x100000B1;
-					packet[0x21] = 0x28000004;
-					packet[0x22] = 0x100000C1;
-					packet[0x23] = (VSW - 1) | 0x4030000;
-					packet[0x24] = 0x28000001;
-					packet[0x25] = 0x100000A1;
-					packet[0x26] = 0x28000002;
-					packet[0x27] = 0x100000B1;
-					packet[0x28] = 0x28000008;
-					packet[0x29] = 0x100000D1;
-					packet[0x2A] = (VBP - 2) | 0x4030000;
-					packet[0x2B] = 0x28000001;
-					packet[0x2C] = 0x100000A1;
-					packet[0x2D] = 0x28000002;
-					packet[0x2E] = 0x100000B1;
-					packet[0x2F] = v98;
-					packet[0x30] = 0x28000001;
-					packet[0x31] = 0x100000A1;
-					packet[0x32] = 0x28000002;
-				}
-
-				packet[0x33] = 0x100000B1;
-
-				unsigned int v69 = 0x28000010;
-				if (v64)
-					v69 = ((v64 << 8) & 0xFFFFFF) | 0x40000099;
-
-				packet[0x34] = v69;
-
-				if (pixel_size == 24)
-					v70 = ((768 * v62) & 0xFFFFFF) | 0x400000BE;
-				else
-					v70 = ((960 * v62) & 0xFFFF00) | 0x400000A9;
-
-				packet[0x35] = v70;
-				packet[0x36] = (VFP - 1) | 0x4030000;
-				packet[0x37] = 0x28000001;
-				packet[0x38] = 0x100000A1;
-
-				unsigned int v72 = 0x28000002;
-				if (v63)
-					v72 = ((v63 << 8) & 0xFFFFFF) | 0x40000099;
-
-				packet[0x39] = v72;
-				packet[0x3A] = 0x100000B1;
-				packet[0x3B] = 0xC000000;
-
-				//packet_size = &packet[0x3C] - &packet[1];
-				packet_size = 0xEC;
-			} else {
-				char *v57;
-				unsigned int v38 = timing_info->HFP;
-				unsigned int v40 = timing_info->vtotal - (VFP + timing_info->VBP);
-				unsigned int v41 = VSW;
-				unsigned int v42 = timing_info->HSW;
-				unsigned int v44 = timing_info->htotal - (HBP + HFP) - HSW;
-				unsigned int v45 = flags & 1;
-				unsigned int v46 = 0x40DFFFF;
-
-				packet[0] = v40 - VSW;
-
-				if (flags & 1)
-					v41 = pixel_size;
-				if (flags & 1)
-					v38 *= v41;
-				if (flags & 1)
-					v45 = ((v38 >> 3) - 0xC) | 0x80000000;
-
-				unsigned int v47 = flags & 2;
-
-				if (flags & 2)
-					v38 = pixel_size;
-				else
-					v42 = 0;
-
-				if (flags & 2)
-					v42 *= v38;
-				if (flags & 2)
-					v42 = ((v42 >> 3) - 0xA) | 0x80000000;
-
-				unsigned int v49 = flags & 4;
-				unsigned int v48 = (v49 == 0);
-
-				unsigned int v97;
-
-				if (v49)
-					v47 = pixel_size;
-				else
-					v97 = 0;
-
-				unsigned int v50 = 0xA30000A2;
-				if (lanes == 3)
-					v50 = 0xA30000A4;
-
-				if (!v48)
-					v47 *= HBP;
-				if (!v48)
-					v97 = ((v47 >> 3) - 0xA) | 0x80000000;
-
-				if (v45)
-					v46 = 0x417FFFF;
-
-				packet[1] = v46;
-				packet[2] = v50;
-				packet[3] = 0x28000004;
-				packet[4] = 0x10000001;
-				if (v42) {
-					packet[5] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[6] = 0x10000031;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[8] = 0x28000001;
-					packet[9] = 0x10000021;
-					packet[0xA] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0xB] = 0x10000031;
-					packet[0xC] = 0x28000008;
-					packet[0xD] = 0x10000011;
-					packet[0xE] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0xF] = 0x10000031;
-					packet[0x10] = (VBP - 2) | 0x4030000;
-					packet[0x11] = 0x28000001;
-					packet[0x12] = 0x10000021;
-					packet[0x13] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-				} else {
-					packet[5] = 0x28000002;
-					packet[6] = 0x10000031;
-					packet[7] = (VSW - 2) | 0x4030000;
-					packet[8] = 0x28000001;
-					packet[9] = 0x10000021;
-					packet[0xA] = 0x28000002;
-					packet[0xB] = 0x10000031;
-					packet[0xC] = 0x28000008;
-					packet[0xD] = 0x10000011;
-					packet[0xE] = 0x28000002;
-					packet[0xF] = 0x10000031;
-					packet[0x10] = (VBP - 2) | 0x4030000;
-					packet[0x11] = 0x28000001;
-					packet[0x12] = 0x10000021;
-					packet[0x13] = 0x28000002;
-				}
-				packet[0x14] = 0x10000031;
-				if (v45) {
-					packet[0x15] = 0x28000001;
-					packet[0x16] = 0x10000021;
-
-					unsigned int v75 = 0x28000002;
-					if (v42)
-						v75 = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x17] = v75;
-
-					packet[0x18] = 0x10000031;
-
-					unsigned int v76 = 0x28000010;
-					if (v97)
-						v76 = ((v97 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x19] = v76;
-
-					unsigned int v77;
-					if (pixel_size == 24)
-						v77 = ((768 * v44) & 0xFFFFFF) | 0x4000003E;
-					else
-						v77 = ((960 * v44) & 0xFFFF00) | 0x40000029;
-					packet[0x1A] = v77;
-
-					packet[0x1B] = ((v45 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x1C] = ((packet[0] & 0xFFFF) - 2) | 0x4050000;
-					packet[0x1D] = 0x10000021;
-
-					unsigned int  v78 = 0x28000002;
-					if (v42)
-						v78 = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x1E] = v78;
-
-					packet[0x1F] = 0x10000031;
-
-					unsigned int v79;
-					if (v97)
-						v79 = ((v97 << 8) & 0xFFFFFF) | 0x40000019;
-					else
-						v79 = 0x28000010;
-					packet[0x20] = v79;
-
-					unsigned int v80;
-					if (pixel_size == 24)
-						v80 = ((768 * v44) & 0xFFFFFF) | 0x4000003E;
-					else
-						v80 = ((960 * v44) & 0xFFFF00) | 0x40000029;
-					packet[0x21] = v80;
-
-					packet[0x22] = ((v45 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x23] = 0x10000021;
-
-					if (v42) {
-						packet[0x24] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-						packet[0x25] = 0x10000031;
-						packet[0x26] = (VFP - 2) | 0x4030000;
-						packet[0x27] = 0x28000001;
-						packet[0x28] = 0x10000021;
-						packet[0x29] = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					} else {
-						packet[0x24] = 0x28000002;
-						packet[0x25] = 0x10000031;
-						packet[0x26] = (VFP - 2) | 0x4030000;
-						packet[0x27] = 0x28000001;
-						packet[0x28] = 0x10000021;
-						packet[0x29] = 0x28000002;
-					}
-					packet[0x2A] = 0x10000031;
-
-					v57 = (char *)&packet[0x2B];
-				} else {
-					packet[0x15] = ((packet[0] & 0xFFFF) - 1) | 0x4050000;
-					packet[0x16] = 0x28000001;
-					packet[0x17] = 0x10000021;
-
-					unsigned int v53 = 0x28000002;
-					if (v42)
-						v53 = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x18] = v53;
-
-					packet[0x19] = 0x10000031;
-
-					unsigned int v54 = 0x28000010;
-					if (v97)
-						v54 = ((v97 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x1A] = v54;
-
-					unsigned int v55;
-					if (pixel_size == 24)
-						v55 = ((768 * v44) & 0xFFFFFF) | 0x4000003E;
-					else
-						v55 = ((960 * v44) & 0xFFFF00) | 0x40000029;
-					packet[0x1B] = v55;
-
-					packet[0x1C] = (VFP - 1) | 0x4030000;
-					packet[0x1D] = 0x28000001;
-					packet[0x1E] = 0x10000021;
-
-					unsigned int v56 = 0x28000002;
-					if (v42)
-						v56 = ((v42 << 8) & 0xFFFFFF) | 0x40000019;
-					packet[0x1F] = v56;
-
-					packet[0x20] = 0x10000031;
-
-					v57 = (char *)&packet[0x21];
-				}
-				*(unsigned int *)v57 = 0xC000000;
-				packet_size = (v57 + 4 - (char *)&packet[1]) >> 2;
-			}
-			if (packet_size <= 0)
-				goto LABEL_18;
+				packet[1] = 0xa30000a4;
+			else
+				packet[1] = 0xa30000a2;
+			packet[2] = 0x28000004;
+			packet[3] = 0x10000001;
+			packet[4] = 0x28000001;
+			packet[5] = 0x10000021;
+			packet[6] = (((VBP + VSW) - 3) & 0xffff) | 0x4010000;
+			packet[7] = 0x28000001;
+			packet[8] = 0x10000021;
+			packet[9] = 0x28000001;
+			packet[10] = 0x10000021;
+			packet[11] = 0x40005619;
+			packet[12] = ((hactive * 768) & 0xffffffU) | 0x4000003e;
+			packet[13] = 0x40015019;
+			packet[14] = (((((vtotal - 2) - VSW) - VBP) - VFP) & 0xffff) | 0x4030000;
+			packet[15] = 0x10000021;
+			packet[16] = 0x40005619;
+			packet[17] = ((hactive * 768) & 0xffffffU) | 0x4000003e;
+			packet[18] = 0x40015019;
+			packet[19] = 0x10000021;
+			packet[20] = ((VFP - 2) & 0xffff) | 0x4010000;
+			packet[21] = 0x28000001;
+			packet[22] = 0x10000021;
+			packet[23] = 0xc000000;
+			packet_length = 24;
+			goto packet_write;
 		}
+
+		unsigned int uVar6;
+		unsigned int *puVar4;
+
+		if (mode == 0) {
+			unsigned int foo1;
+			unsigned int foo2;
+			unsigned int foo3;
+			uVar6 = VBP - 2;
+
+			if (flags & 1)
+				foo1 = ((HFP * pixel_size >> 3) - 0xc) | 0x80000000;
+			else
+				foo1 = 0;
+
+			if (flags & 2)
+				foo2 = ((HSW * pixel_size >> 3) - 10) | 0x80000000;
+			else
+				foo2 = 0;
+
+			if (flags & 4)
+				foo3 = ((HBP * pixel_size >> 3) - 10) | 0x80000000;
+			else
+				foo3 = 0;
+
+			if (foo1)
+				packet[0] = 0x417ffff;
+			else
+				packet[0] = 0x40dffff;
+			if (lanes == 3)
+				packet[1] = 0xa30000a4;
+			else
+				packet[1] = 0xa30000a2;
+			packet[2] = 0x28000004;
+			packet[3] = 0x10000001;
+			packet[5] = 0x10000031;
+			packet[8] = 0x10000021;
+			packet[10] = 0x10000031;
+			packet[12] = 0x10000011;
+			packet[14] = 0x10000031;
+			packet[17] = 0x10000021;
+			if (foo2 == 0)
+				packet[18] = 0x28000002;
+			else
+				packet[18] = ((foo2 & 0xffff) << 8) | 0x40000019;
+			packet[19] = 0x10000031;
+			if (foo1 == 0) {
+				packet[20] = ((vactive - 1) & 0xffff) | 0x4050000;
+				packet[21] = 0x28000001;
+				packet[22] = 0x10000021;
+				if (foo2 != 0)
+					packet[23] = ((foo2 & 0xffff) << 8) | 0x40000019;
+				else
+					packet[23] = 0x28000002;
+				packet[24] = 0x10000031;
+				if (foo3 != 0)
+					packet[25] = ((foo3 & 0xffff) << 8) | 0x40000019;
+				else
+					packet[25] = 0x28000010;
+				if (pixel_size == 0x18)
+					packet[26] = (hactive * 768 & 0xffffffU) | 0x4000003e;
+				else
+					packet[26] = (hactive * 960 & 0xffff00U) | 0x40000029;
+				packet[27] = ((VFP - 1) & 0xffff) | 0x4030000;
+				packet[28] = 0x28000001;
+				packet[29] = 0x10000021;
+				if (foo2 != 0)
+					packet[30] = ((foo2 & 0xffff) << 8) | 0x40000019;
+				else
+					packet[30] = 0x28000002;
+				packet[31] = 0x10000031;
+				puVar4 = &packet[32];
+			} else {
+				packet[20] = 0x28000001;
+				packet[21] = 0x10000021;
+				if (foo2 != 0)
+					packet[22] = ((foo2 & 0xffff) << 8) | 0x40000019;
+				else
+					packet[22] = 0x28000002;
+				packet[23] = 0x10000031;
+				if (foo3 != 0)
+					packet[24] = ((foo3 & 0xffff) << 8) | 0x40000019;
+				else
+					packet[24] = 0x28000010;
+				if (pixel_size == 0x18)
+					packet[25] = (hactive * 768 & 0xffffffU) | 0x4000003e;
+				else
+					packet[25] = (hactive * 960 & 0xffff00U) | 0x40000029;
+				packet[26] = (foo1 & 0xffff) << 8 | 0x40000019;
+				packet[28] = 0x10000021;
+				packet[27] = ((vactive - 2) & 0xffff) | 0x4050000;
+				if (foo2 != 0)
+					packet[29] = (foo2 & 0xffff) << 8 | 0x40000019;
+				else
+					packet[29] = 0x28000002;
+				packet[30] = 0x10000031;
+				if (foo3 == 0)
+					packet[31] = 0x28000010;
+				else
+					packet[31] = (foo3 & 0xffff) << 8 | 0x40000019;
+				if (pixel_size == 0x18)
+					packet[32] = ((hactive * 768) & 0xffffffU) | 0x4000003e;
+				else
+					packet[32] = ((hactive * 960) & 0xffff00U) | 0x40000029;
+				packet[33] = (foo1 & 0xffff) << 8 | 0x40000019;
+				packet[34] = 0x10000021;
+				if (foo2 == 0)
+					packet[35] = 0x28000002;
+				else
+					packet[35] = (foo2 & 0xffff) << 8 | 0x40000019;
+				packet[36] = 0x10000031;
+				packet[37] = ((VFP - 2) & 0xffff) | 0x4030000;
+				packet[38] = 0x28000001;
+				packet[39] = 0x10000021;
+				if (foo2 == 0)
+					packet[40] = 0x28000002;
+				else
+					packet[40] = (foo2 & 0xffff) << 8 | 0x40000019;
+				packet[41] = 0x10000031;
+				puVar4 = &packet[42];
+			}
+			*puVar4 = 0xc000000;
+			packet_length = (int)puVar4 + (4 - (int)packet);
+		} else {
+			unsigned int tmp1;
+			unsigned int tmp2;
+			uVar6 = VBP - 3;
+
+			if (flags & 2)
+				tmp1 = (((HSW * pixel_size) >> 3) - 10) | 0x80000000;
+			else
+				tmp1 = 0;
+
+			if (flags & 4)
+				tmp2 = (((HBP * pixel_size) >> 3) - 10) | 0x80000000;
+			else
+				tmp2 = 0;
+
+			packet[0] = 0x415ffff;
+			if (lanes == 3)
+				packet[1] = 0xa30000a4;
+			else
+				packet[1] = 0xa30000a2;
+			packet[2] = 0x28800005;
+			packet[3] = 0x10000081;
+			packet[5] = 0x100000b1;
+			packet[8] = 0x100000a1;
+			packet[10] = 0x100000b1;
+			packet[12] = 0x10000091;
+			packet[14] = 0x100000b1;
+			packet[17] = 0x100000a1;
+			packet[19] = 0x100000b1;
+			packet[20] = ((((vtotal + 1 - 2 * (VSW + VFP + VBP)) >> 1) - 1) & 0xffff) | 0x4050000;
+			packet[21] = 0x28000001;
+			packet[22] = 0x100000a1;
+			if (tmp1 == 0)
+				packet[23] = 0x28000002;
+			else
+				packet[23] = (tmp1 & 0xffff) << 8 | 0x40000099;
+			packet[24] = 0x100000b1;
+			if (tmp2 != 0)
+				packet[25] = (tmp2 & 0xffff) << 8 | 0x40000099;
+			else
+				packet[25] = 0x28000010;
+			if (pixel_size == 0x18)
+				packet[26] = ((hactive * 768) & 0xffffffU) | 0x400000be;
+			else
+				packet[26] = ((hactive * 960) & 0xffff00U) | 0x400000a9;
+			packet[27] = (VFP & 0xffff) | 0x4030000;
+			packet[28] = 0x28000001;
+			packet[29] = 0x100000a1;
+			packet[31] = 0x100000b1;
+			packet[32] = 0x28000004;
+			packet[33] = 0x100000c1;
+			packet[34] = ((VSW - 1) & 0xffff) | 0x4030000;
+			packet[35] = 0x28000001;
+			packet[36] = 0x100000a1;
+			packet[38] = 0x100000b1;
+			packet[39] = 0x28000008;
+			packet[40] = 0x100000d1;
+			packet[41] = ((VBP - 2) & 0xffff) | 0x4030000;
+			packet[42] = 0x28000001;
+			packet[43] = 0x100000a1;
+			packet[45] = 0x100000b1;
+			packet[46] = packet[20];
+			packet[47] = 0x28000001;
+			packet[48] = 0x100000a1;
+			if (tmp1 == 0)
+				packet[49] = 0x28000002;
+			else
+				packet[49] = (tmp1 & 0xffff) << 8 | 0x40000099;
+			packet[50] = 0x100000b1;
+			if (tmp2 != 0)
+				packet[51] = (tmp2 & 0xffff) << 8 | 0x40000099;
+			else
+				packet[51] = 0x28000010;
+			if (pixel_size == 0x18)
+				packet[52] = ((hactive * 768) & 0xffffffU) | 0x400000be;
+			else
+				packet[52] = ((hactive * 960) & 0xffff00U) | 0x400000a9;
+			packet[53] = ((VFP - 1) & 0xffff) | 0x4030000;
+			packet[54] = 0x28000001;
+			packet[55] = 0x100000a1;
+			if (tmp1 != 0)
+				packet[56] = (tmp1 & 0xffff) << 8 | 0x40000099;
+			else
+				packet[56] = 0x28000002;
+			packet[57] = 0x100000b1;
+			packet[58] = 0xc000000;
+			packet[18] = packet[23];
+			packet[30] = packet[49];
+			packet[37] = packet[49];
+			packet[44] = packet[49];
+			packet_length = 0xec;
+		}
+
+		packet[4] = packet[18];
+		packet[6] = ((VSW - 2) & 0xffff) | 0x4030000;
+		packet[7] = 0x28000001;
+		packet[9] = packet[18];
+		packet[11] = 0x28000008;
+		packet[13] = packet[18];
+		packet[15] = (uVar6 & 0xffff) | 0x4030000;
+		packet[16] = 0x28000001;
+		packet_length = packet_length >> 2;
+		if (packet_length > 0)
+			goto packet_write;
 	} else {
-		unsigned int v32;
-
-		unsigned int htotal = timing_info->htotal;
-		unsigned int horizontal_porches = timing_info->HFP + timing_info->HSW;
-		unsigned int vertical_porches = VSW + VBP;
-		unsigned int vtotal = timing_info->vtotal;
-		unsigned int horizontal_pixels = htotal - horizontal_porches;
-
-		if (unk07)
-			v32 = 0x400B7819;
-		else
-			v32 = 0x400B4019;
-
 		dsi_regs[0x20D] = 7;
 		dsi_regs[0x20E] = 0;
 		dsi_regs[0x201] = 1;
 		dsi_regs[0x145] = 0xFFFFFFFF;
 
-		packet[1] = 0x407FFFF;
-		packet[2] = 0xA3000082;
-		packet[3] = 0x28000004;
-		packet[4] = 0x10000001;
-		packet[5] = v32;
-		packet[6] = (vertical_porches - 2) | 0x4020000;
-		packet[7] = 0x28000001;
-		packet[8] = 0x10000021;
-		packet[9] = v32;
-		packet[0xA] = ((vtotal - 1) - VSW - VBP - VFP) | 0x4030000;
-		packet[0xB] = 0x28000001;
-		packet[0xC] = 0x10000021;
-		packet[0xD] = ((768 * HBP - 0xA00) & 0xFFFFFF) | 0x40000019;
-		packet[0xE] = ((768 * (horizontal_pixels - HBP)) & 0xFFFFFF) | 0x4000003E;
-		packet[0xF] = (VFP - 1) | 0x4020000;
-		packet[0x10] = 0x28000001;
-		packet[0x11] = 0x10000021;
-		packet[0x12] = v32;
-		packet[0x13] = 0xC000000;
-
-		packet_size = 0x13;
+		packet[0] = 0x407ffff;
+		packet[1] = 0xa3000082;
+		packet[2] = 0x28000004;
+		packet[3] = 0x10000001;
+		if (unk07 == 0)
+			packet[4] = 0x400b4019;
+		else
+			packet[4] = 0x400b7819;
+		packet[5] = (((VSW + VBP) - 2) & 0xffff) | 0x4020000;
+		packet[6] = 0x28000001;
+		packet[7] = 0x10000021;
+		if (unk07 == 0)
+			packet[8] = 0x400b4019;
+		else
+			packet[8] = 0x400b7819;
+		packet[9] = (((((vtotal - 1) - VSW) - VBP) - VFP) & 0xffff) | 0x4030000;
+		packet[10] = 0x28000001;
+		packet[11] = 0x10000021;
+		packet[12] = (((HBP * 768) - 0xa00) & 0xffffff) | 0x40000019;
+		packet[13] = ((((htotal - (HFP + HSW)) - HBP) * 768) & 0xffffff) | 0x4000003e;
+		packet[14] = ((VFP - 1) & 0xffff) | 0x4020000;
+		packet[15] = 0x28000001;
+		packet[16] = 0x10000021;
+		if (unk07 == 0)
+			packet[17] = 0x400b4019;
+		else
+			packet[17] = 0x400b7819;
+		packet[18] = 0xc000000;
+		packet_length = 19;
+packet_write:
+		for (unsigned int i = 0; i < packet_length; i++)
+			dsi_regs[0x140] = packet[i];
 	}
 
-	unsigned int *packer_ptr = packet;
-	unsigned int i = 0;
-	do {
-		unsigned int data = packer_ptr[1];
-		packer_ptr++;
-		i++;
-		dsi_regs[0x140] = data;
-	} while (i < packet_size);
-
-LABEL_18:
 	dsi_regs[0x147] = 1;
 }
 
