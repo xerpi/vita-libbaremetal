@@ -167,7 +167,7 @@ int dsi_get_pixelclock_for_vic(unsigned int vic, unsigned int bpp, unsigned int 
 	return 0;
 }
 
-void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
+void dsi_start_master(enum dsi_bus bus, unsigned int vic)
 {
 	static const int pixel_size = 24;
 
@@ -179,7 +179,7 @@ void dsi_enable_bus(enum dsi_bus bus, unsigned int vic)
 	int lanes = dsi_lanes_for_bus[bus];
 	int unk07 = dsi_unk07_for_bus[bus];
 
-	pervasive_dsi_misc_unk(bus);
+	pervasive_dsi_misc_unk_enable(bus);
 
 	dsi_regs[0x15] = 0;
 	dsi_regs[0x146] = 1;
@@ -537,6 +537,27 @@ packet_write:
 	}
 
 	dsi_regs[0x147] = 1;
+}
+
+void dsi_stop_master(enum dsi_bus bus)
+{
+	volatile unsigned int *dsi_regs = DSI_REGS(bus);
+	int lanes = dsi_lanes_for_bus[bus];
+
+	while ((dsi_regs[0x12] & 0xF) != 0)
+		;
+
+	dsi_regs[0x145] = 0xffffffff;
+	dsi_regs[0x250] = 1;
+	dsi_regs[0x251] = 1;
+	dsi_regs[0x252] = 1;
+	if (lanes == 3)
+		dsi_regs[0x253] = 1;
+	dsi_regs[0x20D] = 0;
+	dsi_regs[0x201] = 1;
+	dsb();
+
+	pervasive_dsi_misc_unk_disable(bus);
 }
 
 void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)

@@ -263,7 +263,7 @@ void pervasive_dsi_set_pixelclock(int bus, int pixelclock)
 	dsb();
 }
 
-void pervasive_dsi_misc_unk(int bus)
+void pervasive_dsi_misc_unk_enable(int bus)
 {
 	volatile unsigned int *pervasive_misc_regs = (void *)PERVASIVE_MISC_BASE_ADDR;
 
@@ -271,6 +271,18 @@ void pervasive_dsi_misc_unk(int bus)
 		pervasive_misc_regs[0x52] = 0;
 	else
 		pervasive_misc_regs[0x50] = 0;
+
+	dmb();
+}
+
+void pervasive_dsi_misc_unk_disable(int bus)
+{
+	volatile unsigned int *pervasive_misc_regs = (void *)PERVASIVE_MISC_BASE_ADDR;
+
+	if (bus)
+		pervasive_misc_regs[0x52] = 1;
+	else
+		pervasive_misc_regs[0x50] = 1;
 
 	dmb();
 }

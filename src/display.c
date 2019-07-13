@@ -144,7 +144,7 @@ static void display_init_oled(void)
 	pervasive_reset_exit_dsi(0, 7);
 
 	dsi_init();
-	dsi_enable_bus(DSI_BUS_OLED_LCD, vic);
+	dsi_start_master(DSI_BUS_OLED_LCD, vic);
 
 	dsi_unk(DSI_BUS_OLED_LCD, vic, 1);
 
@@ -168,7 +168,7 @@ static void display_init_hdmi(void)
 	pervasive_reset_exit_dsi(1, 7);
 
 	dsi_init();
-	dsi_enable_bus(DSI_BUS_HDMI, vic);
+	dsi_start_master(DSI_BUS_HDMI, vic);
 
 	dsi_unk(DSI_BUS_HDMI, vic, 0);
 

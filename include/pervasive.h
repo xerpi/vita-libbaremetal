@@ -25,7 +25,8 @@ void pervasive_reset_exit_msif(void);
 void pervasive_reset_enter_msif(void);
 
 void pervasive_dsi_set_pixelclock(int bus, int pixelclock);
-void pervasive_dsi_misc_unk(int bus);
+void pervasive_dsi_misc_unk_enable(int bus);
+void pervasive_dsi_misc_unk_disable(int bus);
 
 void pervasive_hdmi_cec_set_enabled(int enable);
 
