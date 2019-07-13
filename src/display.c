@@ -145,8 +145,7 @@ static void display_init_oled(void)
 
 	dsi_init();
 	dsi_start_master(DSI_BUS_OLED_LCD, vic);
-
-	dsi_unk(DSI_BUS_OLED_LCD, vic, 1);
+	dsi_start_display(DSI_BUS_OLED_LCD, vic, 1);
 
 	oled_init();
 }
@@ -169,8 +168,7 @@ static void display_init_hdmi(void)
 
 	dsi_init();
 	dsi_start_master(DSI_BUS_HDMI, vic);
-
-	dsi_unk(DSI_BUS_HDMI, vic, 0);
+	dsi_start_display(DSI_BUS_HDMI, vic, 0);
 
 	hdmi_init();
 

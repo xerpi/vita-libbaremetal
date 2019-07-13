@@ -560,7 +560,7 @@ void dsi_stop_master(enum dsi_bus bus)
 	pervasive_dsi_misc_unk_disable(bus);
 }
 
-void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)
+void dsi_start_display(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 {
 	static const unsigned int pixel_size = 24;
 	static const unsigned int intr_mask = 2;
@@ -592,32 +592,34 @@ void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 	else
 		dsi_regs[1] = 0;
 
-	unsigned int v15;
-	if (lanes == 2)
-		v15 = 6;
-	else if (pixel_size == 24)
-		v15 = 4;
-	else
-		v15 = 5;
+	unsigned int clocks_per_pixel;
+	if (lanes == 2) {
+		clocks_per_pixel = 6;
+	} else {
+		if (pixel_size == 24)
+			clocks_per_pixel = 4;
+		else
+			clocks_per_pixel = 5;
+	}
 
 	unsigned int HFP_start = hact + hsync_end;
-	unsigned int HSW_clocks = HSW * v15;
-	unsigned int htotal_clocks = htotal * v15 >> 1;
+	unsigned int HSW_clocks = HSW * clocks_per_pixel;
+	unsigned int htotal_clocks = htotal * clocks_per_pixel >> 1;
 	dsi_regs[2] = htotal_clocks;
 
 	unsigned int v20;
 	unsigned int v21;
 
 	if (mode == 1) { // Interlaced
-		unsigned int v36 = HFP_start * v15;
-		unsigned int v37 = htotal * v15 >> 2;
+		unsigned int v36 = HFP_start * clocks_per_pixel;
+		unsigned int v37 = htotal * clocks_per_pixel >> 2;
 
 		v20 = vtotal + 1;
 		v21 = (vtotal + 1) >> 1;
 
 		dsi_regs[3] = ((vtotal << 16) & 0x1FFF0000) | (v21 & 0x1FFF);
 		dsi_regs[4] = 0x10001;
-		dsi_regs[5] = (((hsync_end * v15) >> 1) << 16) | (((v36 >> 1) + 1) & 0xFFFF);
+		dsi_regs[5] = (((hsync_end * clocks_per_pixel) >> 1) << 16) | (((v36 >> 1) + 1) & 0xFFFF);
 		dsi_regs[7] = (((VBP + VSW - 1) << 16) & 0x1FFF0000) | ((v21 - VFP) & 0x1FFF);
 		dsi_regs[8] = (((VBP + VSW + ((vtotal - 1) >> 1)) << 16) & 0x1FFF0000) | ((vtotal + 1 - VFP) & 0x1FFF);
 		dsi_regs[9] = ((HSW_clocks >> 1) << 16) | 1;
@@ -631,7 +633,7 @@ void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 
 		dsi_regs[3] = vtotal;
 		dsi_regs[4] = 0x10001;
-		dsi_regs[5] = ((((HBP + HSW) * v15) >> 1) << 16) | ((((HFP_start * v15) >> 1) + 1) & 0xFFFF);
+		dsi_regs[5] = ((((HBP + HSW) * clocks_per_pixel) >> 1) << 16) | ((((HFP_start * clocks_per_pixel) >> 1) + 1) & 0xFFFF);
 		dsi_regs[7] = (((VBP + VSW) << 16) & 0x1FFF0000) | ((vtotal + 1 - VFP) & 0x1FFF);
 		dsi_regs[9] = ((HSW_clocks >> 1) << 16) | 1;
 		dsi_regs[0xB] = 0x10001;
@@ -656,6 +658,8 @@ void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 			dsi_regs[0xA] = 0x63101D;
 			v34 = 0;
 			v35 = 1092;
+		} else {
+			goto skip;
 		}
 
 		dsi_regs[0x1D] = v34;
@@ -663,6 +667,7 @@ void dsi_unk(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 		dsi_regs[1] |= 0x100;
 	}
 
+skip:
 	dsi_regs[0xF] = 1;
 	unsigned int vact_start = VBP + VSW;
 	dsi_regs[0x10] = (((v21 + vact_start - 8) << 16) & 0x1FFF0000) | ((vact_start - 8) & 0x1FFF);
