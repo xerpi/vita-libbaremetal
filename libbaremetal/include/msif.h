@@ -21,7 +21,7 @@ struct msif_info {
 };
 
 void msif_init(void);
-void msif_setup(void);
+void msif_setup(const unsigned char key[32]);
 void msif_get_info(struct msif_info *info);
 void msif_read_sector(unsigned int sector, void *buff);
 void msif_read_atrb(unsigned int address, void *buff);

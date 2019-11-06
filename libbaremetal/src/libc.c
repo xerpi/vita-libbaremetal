@@ -1,5 +1,4 @@
 #include "libc.h"
-#include "log.h"
 
 void *memset(void *s, int c, size_t n)
 {
@@ -50,9 +49,3 @@ size_t strlen(const char *str)
 	return s - str;
 }
 
-void exit(int status)
-{
-	LOG("exit(%d) called.\n", status);
-	while (1)
-		;
-}

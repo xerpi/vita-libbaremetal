@@ -1,17 +1,21 @@
 #include <stdio.h>
-#include "pervasive.h"
-#include "cdram.h"
-#include "gpio.h"
-#include "i2c.h"
-#include "syscon.h"
-#include "sysroot.h"
-#include "display.h"
-#include "ctrl.h"
-#include "msif.h"
-#include "draw.h"
-#include "font.h"
-#include "utils.h"
+#include <baremetal/pervasive.h>
+#include <baremetal/cdram.h>
+#include <baremetal/gpio.h>
+#include <baremetal/i2c.h>
+#include <baremetal/syscon.h>
+#include <baremetal/sysroot.h>
+#include <baremetal/display.h>
+#include <baremetal/ctrl.h>
+#include <baremetal/msif.h>
+#include <baremetal/draw.h>
+#include <baremetal/font.h>
+#include <baremetal/utils.h>
 #include "log.h"
+
+static const unsigned char msif_key[32] = {
+	0 /* Bring your own keys */
+};
 
 int main(struct sysroot_buffer *sysroot)
 {
@@ -47,7 +51,7 @@ int main(struct sysroot_buffer *sysroot)
 	if (pervasive_msif_get_card_insert_state()) {
 		msif_init();
 		syscon_msif_set_power(1);
-		msif_setup();
+		msif_setup(msif_key);
 		LOG("MS auth done!\n");
 
 		unsigned char sector[MS_SECTOR_SIZE];

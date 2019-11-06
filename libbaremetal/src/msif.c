@@ -106,6 +106,34 @@ struct msif_auth_tpc_cmd4A_req {
 	unsigned char reserved[0x18];
 } __attribute__((packed));
 
+static void auth_get_random_data(unsigned char *buf, int size)
+{
+	memset(buf, 0, size);
+}
+
+static void aes_cbc_enc(void *dst, const void *src, const void *key, void *iv,
+		        unsigned int key_size, unsigned int size)
+{
+	mbedtls_aes_context aes;
+
+	mbedtls_aes_init(&aes);
+	mbedtls_aes_setkey_enc(&aes, key, key_size);
+	mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, size, iv, src, dst);
+	mbedtls_aes_free(&aes);
+}
+
+static void des3_cbc_cts_enc_iv_0(void *dst, const void *src, const void *key, unsigned int size)
+{
+	unsigned char iv[8];
+	mbedtls_des3_context des3;
+
+	memset(iv, 0, sizeof(iv));
+	mbedtls_des3_init(&des3);
+	mbedtls_des3_set3key_enc(&des3, key);
+	mbedtls_des3_crypt_cbc(&des3, MBEDTLS_DES_ENCRYPT, size, iv, src, dst);
+	mbedtls_des3_free(&des3);
+}
+
 static inline void ms_tpc(unsigned int tpc, unsigned int size)
 {
 	writew(tpc | (size & 0x7FF), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
@@ -465,29 +493,6 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 	*model_name_type = type;
 }
 
-static void aes_cbc_enc(void *dst, const void *src, const void *key, void *iv,
-		        unsigned int key_size, unsigned int size)
-{
-	mbedtls_aes_context aes;
-
-	mbedtls_aes_init(&aes);
-	mbedtls_aes_setkey_enc(&aes, key, key_size);
-	mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, size, iv, src, dst);
-	mbedtls_aes_free(&aes);
-}
-
-static void des3_cbc_cts_enc_iv_0(void *dst, const void *src, const void *key, unsigned int size)
-{
-	unsigned char iv[8];
-	mbedtls_des3_context des3;
-
-	memset(iv, 0, sizeof(iv));
-	mbedtls_des3_init(&des3);
-	mbedtls_des3_set3key_enc(&des3, key);
-	mbedtls_des3_crypt_cbc(&des3, MBEDTLS_DES_ENCRYPT, size, iv, src, dst);
-	mbedtls_des3_free(&des3);
-}
-
 static void msif_auth_derive_iv_tweak(const unsigned char *tweak_seed,
 				      unsigned char *tweak_key0,
 				      unsigned char *tweak_key1)
@@ -562,12 +567,10 @@ static void rmauth_cmd_0x1(unsigned int *res)
 	*res = 0;
 }
 
-static void rmauth_cmd_0x2(const unsigned char seed[32], unsigned char out_key[32])
+static void rmauth_cmd_0x2(const unsigned char key[32],
+			   const unsigned char seed[32],
+			   unsigned char out_key[32])
 {
-	static const unsigned char key[32] = {
-		0 /* Bring your own keys */
-	};
-
 	unsigned char iv[MBEDTLS_AES_BLOCK_SIZE];
 	unsigned char seed_trunc[16];
 
@@ -580,12 +583,7 @@ static void rmauth_cmd_0x2(const unsigned char seed[32], unsigned char out_key[3
 	aes_cbc_enc(&out_key[16], seed_trunc, &key[16], iv, 128, 16);
 }
 
-static void get_random_data(unsigned char *buf, int size)
-{
-	memset(buf, 0, size);
-}
-
-static void msif_auth(unsigned int auth_val)
+static void msif_auth(const unsigned char key[32], unsigned int auth_val)
 {
 	unsigned char key_1C[32];
 
@@ -593,7 +591,7 @@ static void msif_auth(unsigned int auth_val)
 	rmauth_cmd_0x1(&f00d_cmd1_res);
 
 	unsigned char session_id[8];
-	get_random_data(session_id, sizeof(session_id));
+	auth_get_random_data(session_id, sizeof(session_id));
 
 	/* Execute TPC cmd 0x48 - send request - establish session with memory card */
 	struct msif_auth_tpc_cmd48_req cmd48_req;
@@ -608,7 +606,7 @@ static void msif_auth(unsigned int auth_val)
 	msif_read_short_data(MS_TPC_MSIF_AUTH_49, &cmd49_resp, 0x40);
 
 	/* Execute f00d rm_auth cmd 0x2, scrambles and sets the key into slot 0x1C */
-	rmauth_cmd_0x2(cmd49_resp.f00d_1C_key, key_1C);
+	rmauth_cmd_0x2(key, cmd49_resp.f00d_1C_key, key_1C);
 
 	/* Prepare 3des-cbc-cts (dmac5 cmd 0x41 request) data */
 	struct msif_auth_dmac5_41_req1 d5req1;
@@ -642,7 +640,7 @@ static void msif_auth(unsigned int auth_val)
 	msif_write_short_data(MS_TPC_MSIF_AUTH_4A, &cmd4A_req, 0x20);
 }
 
-void msif_setup(void)
+void msif_setup(const unsigned char key[32])
 {
 	unsigned int misc_0x0000;
 	unsigned int hw_info_masked;
@@ -675,9 +673,9 @@ void msif_setup(void)
 	ms_set_bus_mode(4);
 
 	if ((model_name_type & 0xF0) == 0x10)
-		msif_auth(2);
+		msif_auth(key, 2);
 	else if ((model_name_type & 0xF0) == 0x20)
-		msif_auth(5);
+		msif_auth(key, 5);
 }
 
 void msif_get_info(struct msif_info *info)
