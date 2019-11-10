@@ -2,6 +2,7 @@
 #include "pervasive.h"
 #include "dsi.h"
 #include "oled.h"
+#include "lcd.h"
 #include "hdmi.h"
 #include "libc.h"
 
@@ -152,7 +153,20 @@ static void display_init_oled(void)
 
 static void display_init_lcd(void)
 {
-	/* TODO */
+	static const unsigned int vic = 0;
+	unsigned int pixelclock;
+
+	dsi_get_pixelclock_for_vic(vic, 24, &pixelclock);
+
+	pervasive_dsi_set_pixelclock(0, pixelclock);
+	pervasive_clock_enable_dsi(0, 0xF);
+	pervasive_reset_exit_dsi(0, 7);
+
+	dsi_init();
+	dsi_start_master(DSI_BUS_OLED_LCD, vic);
+	dsi_start_display(DSI_BUS_OLED_LCD, vic, 1);
+
+	lcd_init();
 }
 
 static void display_init_hdmi(void)
