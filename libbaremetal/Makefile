@@ -3,8 +3,8 @@ SRCDIR	= src
 INCDIR	= include
 MBEDTLS	= mbedtls
 OBJS	= libc.o utils.o pervasive.o cdram.o uart.o gpio.o i2c.o \
-	  iftu.o dsi.o display.o spi.o syscon.o hdmi.o oled.o ctrl.o \
-	  sysroot.o msif.o draw.o font.o tiny-printf.o font_data.o
+	  iftu.o dsi.o display.o spi.o syscon.o hdmi.o oled.o lcd.o \
+	  ctrl.o sysroot.o msif.o draw.o font.o tiny-printf.o font_data.o
 
 VITASDK_PREFIX  ?= $(VITASDK)/arm-vita-eabi
 
