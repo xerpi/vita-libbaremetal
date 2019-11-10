@@ -37,11 +37,13 @@ struct sysroot_buffer {
 	unsigned short unka8[(0xb0 - 0xa8) / 2];
 	unsigned char session_id[0x10];
 	unsigned int unkc0;
-	unsigned int boot_type_indicator_2;
+	unsigned int wakeup_factor;
 	unsigned int unkc8[(0xd0 - 0xc8) / 4];
 	unsigned int suspend_saved_context_paddr;
 	unsigned int hw_info;
-	unsigned int unkd8[(0xf8 - 0xd8) / 4];
+	unsigned int boot_type_indicator_2;
+	unsigned char unkdc[0xC];
+	unsigned char hw_flags[0x10];
 	unsigned int bootloader_revision;
 	unsigned int sysroot_magic_value;
 	unsigned char encrypted_session_key[0x20];
@@ -53,5 +55,6 @@ int sysroot_model_is_vita(void);
 int sysroot_model_is_dolce(void);
 int sysroot_model_is_vita2k(void);
 int sysroot_model_is_unk(void);
+int sysroot_is_au_codec_ic_conexant(void);
 
 #endif

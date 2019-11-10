@@ -77,3 +77,8 @@ int sysroot_model_is_unk(void)
 
 	return 0;
 }
+
+int sysroot_is_au_codec_ic_conexant(void)
+{
+	return (sysroot->hw_flags[0] & 3) == 1;
+}

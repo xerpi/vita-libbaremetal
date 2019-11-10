@@ -8,7 +8,8 @@
 #define SPI_BASE_ADDR	0xE0A00000
 #define SPI_REGS(i)	((void *)(SPI_BASE_ADDR + (i) * 0x10000))
 
-#define NOP 0x0D
+#define DELAY 0x0D
+#define END 0xFF
 
 struct oled_cmd {
 	unsigned char cmd;
@@ -26,14 +27,14 @@ static const unsigned char oled_init_cmdlist1[] = {
 	0xF6, 1, 2,
 	0xC6, 0xA, 0xB, 0, 0, 0x3C, 0, 0x22, 0, 0, 0, 0,
 	0xF7, 1, 0x20,
-	0xFF
+	END, END
 };
 
 static const unsigned char oled_init_cmdlist2[] = {
 	0xB2, 4, 0xB, 0xB, 0xB, 0xB,
 	0xB1, 3, 7, 0, 0x16,
 	0xF8, 0x13, 0x7F, 0x7A, 0x89, 0x67, 0x26, 0x38, 0, 0, 9, 0x67, 0x70, 0x88, 0x7A, 0x76, 5, 9, 0x23, 0x23, 0x23,
-	0xFF
+	END, END
 };
 
 static const unsigned char oled_init_cmdlist3[] = {
@@ -41,34 +42,34 @@ static const unsigned char oled_init_cmdlist3[] = {
 	0xB2, 4, 6, 6, 6, 6,
 	0xB1, 3, 7, 0, 0x10,
 	0xF8, 0x13, 0x7F, 0x7A, 0x89, 0x67, 0x26, 0x38, 0, 0, 9, 0x67, 0x70, 0x88, 0x7A, 0x76, 5, 9, 0x23, 0x23, 0x23,
-	0xFF
+	END, END
 };
 
 static const unsigned char oled_disp_on_cmdlist[] = {
-	NOP, 4,
+	DELAY, 4,
 	0x11, 0,
-	NOP, 0x0D,
+	DELAY, 0x0D,
 	0x29, 0,
-	NOP, 1,
-	0xFF
+	DELAY, 1,
+	END, END
 };
 
 static const unsigned char oled_disp_off_cmdlist[] = {
 	0x28, 0,
-	NOP, 1,
+	DELAY, 1,
 	0x10, 0,
-	NOP, 6,
-	0xFF
+	DELAY, 6,
+	END, END
 };
 
 static const unsigned char oled_color_space_mode_0_cmdlist[] = {
 	0xB3, 1, 0,
-	0xFF
+	END, END
 };
 
 static const unsigned char oled_color_space_mode_1_cmdlist[] = {
 	0xB3, 1, 1,
-	0xFF
+	END, END
 };
 
 static const unsigned char oled_brightness_cmdlist[] = {
@@ -76,7 +77,7 @@ static const unsigned char oled_brightness_cmdlist[] = {
 	0xF9, 1, 0,
 	0x26, 1, 0,
 	0xB2, 1, 0x15,
-	0xFF
+	END, END
 };
 
 static void oled_write_cmd(const struct oled_cmd *cmd)
@@ -160,21 +161,21 @@ static void oled_write_cmd(const struct oled_cmd *cmd)
 static void oled_write_cmdlist(const struct oled_cmd *cmdlist)
 {
 	const struct oled_cmd *cmd = cmdlist;
-	int nop_count = 0;
+	int delay_count = 0;
 
 	while (cmd) {
-		if (nop_count <= 0) {
-			if (cmd->cmd == 0xFF) {
+		if (delay_count <= 0) {
+			if (cmd->cmd == END) {
 				break;
-			} else if (cmd->cmd == NOP) {
-				nop_count = cmd->size - 1;
+			} else if (cmd->cmd == DELAY) {
+				delay_count = cmd->size - 1;
 				cmd++;
 			} else {
 				oled_write_cmd(cmd);
 				cmd = (struct oled_cmd *)&cmd->data[cmd->size];
 			}
 		} else {
-			nop_count--;
+			delay_count--;
 		}
 		delay(16000 / 160);
 	}
@@ -185,9 +186,8 @@ int oled_init(void)
 	spi_init(2);
 	pervasive_clock_disable_spi(2);
 
-	gpio_set_port_mode(0, GPIO_PORT_OLED,
-			   GPIO_PORT_MODE_OUTPUT);
-	gpio_port_set(0, GPIO_PORT_OLED);
+	gpio_set_port_mode(0, GPIO_PORT_OLED_LCD, GPIO_PORT_MODE_OUTPUT);
+	gpio_port_set(0, GPIO_PORT_OLED_LCD);
 
 	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist1);
 	oled_write_cmdlist((struct oled_cmd *)oled_init_cmdlist3);
