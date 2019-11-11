@@ -138,6 +138,36 @@ static void lcd_write_cmd(const struct lcd_cmd *cmd)
 	pervasive_clock_disable_spi(2);
 }
 
+static void lcd_read(unsigned char *buffer, unsigned int size, int header_bits)
+{
+	volatile unsigned int *spi_regs = SPI_REGS(2);
+	unsigned int readcnt = 0;
+	unsigned int tmp_bits = 0;
+	unsigned int tmp = 0;
+
+	while (readcnt < size) {
+		while (spi_regs[0xA] == 0)
+			;
+
+		tmp = tmp | (spi_regs[0] << tmp_bits);
+		tmp_bits = tmp_bits + 16;
+
+		if (header_bits != 0) {
+			tmp_bits = tmp_bits - header_bits;
+			tmp = tmp >> header_bits;
+			header_bits = 0;
+			if (tmp_bits == 7)
+				continue;
+		}
+
+		while (tmp_bits >= 8) {
+			buffer[readcnt++] = rbit(tmp & 0xFF) >> 24;
+			tmp = tmp >> 8;
+			tmp_bits -= 8;
+		}
+	}
+}
+
 static void lcd_write_cmdlist(const struct lcd_cmd *cmdlist)
 {
 	const struct lcd_cmd *cmd = cmdlist;
@@ -197,6 +227,50 @@ static void lcd_bl_reset(void)
 	lcd_bl_write_cmdlist(cmdlist);
 }
 
+static const unsigned char lcd_cmd_disp_on_1[] = {
+	0x0D, 0x04, 0x11, 0x00, 0x0D, 0x0D,
+	0xB0, 0x01, 0x00,
+	0xC0, 0x07, 0x03, 0x21, 0x02, 0x23, 0x02, 0x07, 0x07,
+	0xB0, 0x01, 0x03,
+	0x29, 0x00,
+	0x0D, 0x01, 0xFF,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const unsigned char lcd_cmd_disp_on_2[] = {
+	0x0D, 0x04, 0x11, 0x00, 0x0D, 0x0D,
+	0xB0, 0x01, 0x00,
+	0xC0, 0x07, 0x03, 0x1F, 0x02, 0x23, 0x02, 0x07, 0x07,
+	0xB0, 0x01, 0x03,
+	0x29, 0x00,
+	0x0D, 0x01, 0xFF,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const unsigned char lcd_cmd_disp_on_3[] = {
+	0x0D, 0x04, 0x11, 0x00, 0x0D, 0x0D,
+	0xB0, 0x01, 0x00,
+	0xBB, 0x03, 0x08, 0xFF, 0x01,
+	0xB0, 0x01, 0x03,
+	0x0D, 0x04, 0x29, 0x00, 0x0D, 0x01,
+	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static void lcd_display_on(void)
+{
+	static const unsigned short supplier_elective_data = 0;
+	struct lcd_cmd *cmdlist;
+
+	if (supplier_elective_data < 0x25) {
+		cmdlist = (struct lcd_cmd *)lcd_cmd_disp_on_2;
+	} else {
+		if (supplier_elective_data < 0x32)
+			cmdlist = (struct lcd_cmd *)lcd_cmd_disp_on_1;
+		else
+			cmdlist = (struct lcd_cmd *)lcd_cmd_disp_on_3;
+	}
+}
+
 int lcd_init(void)
 {
 	spi_init(2);
@@ -208,6 +282,8 @@ int lcd_init(void)
 	gpio_port_set(1, 7);
 
 	lcd_bl_reset();
+
+	lcd_display_on();
 
 	/*lcd_write_cmdlist((struct lcd_cmd *)lcd_init_cmdlist1);
 	lcd_write_cmdlist((struct lcd_cmd *)lcd_init_cmdlist3);
