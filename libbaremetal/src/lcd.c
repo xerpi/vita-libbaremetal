@@ -104,6 +104,20 @@ static const unsigned char lcd_cmd_colormode_1[] = {
 	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+static const unsigned char lcd_cmd_unk_0[] = {
+	0xB0, 0x01, 0x00,
+	0xB8, 0x05, 0x00, 0x1A, 0x18, 0x02, 0x40,
+	0xB0, 0x01, 0x03,
+	0xFF, 0x00, 0x00
+};
+
+static const unsigned char lcd_cmd_unk_1[] = {
+	0xB0, 0x01, 0x00,
+	0xB8, 0x05, 0x01, 0x1A, 0x18, 0x02, 0x40,
+	0xB0, 0x01, 0x03,
+	0xFF, 0x00, 0x00
+};
+
 static void lcd_spi_write_cmd(const struct lcd_spi_cmd *cmd)
 {
 	unsigned int i;
@@ -274,7 +288,8 @@ static void lcd_bl_reset(void)
 static void lcd_display_on(unsigned short supplier_elective_data)
 {
 	static const int colormode = 0;
-	struct lcd_spi_cmd *cmdlist_on, *cmdlist_colormode;
+	static const int unk = 0;
+	struct lcd_spi_cmd *cmdlist_on, *cmdlist_colormode, *cmdlist_unk;
 
 	if (supplier_elective_data < 0x25) {
 		cmdlist_on = (struct lcd_spi_cmd *)lcd_cmd_disp_on_2;
@@ -290,8 +305,14 @@ static void lcd_display_on(unsigned short supplier_elective_data)
 	else
 		cmdlist_colormode = (struct lcd_spi_cmd *)lcd_cmd_colormode_0;
 
+	if (unk)
+		cmdlist_unk = (struct lcd_spi_cmd *)lcd_cmd_unk_1;
+	else
+		cmdlist_unk = (struct lcd_spi_cmd *)lcd_cmd_unk_0;
+
 	lcd_spi_write_cmdlist(cmdlist_on);
 	lcd_spi_write_cmdlist(cmdlist_colormode);
+	lcd_spi_write_cmdlist(cmdlist_unk);
 }
 
 static void lcd_read_ddb(unsigned short *supplier_id,
