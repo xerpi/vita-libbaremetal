@@ -62,32 +62,52 @@ static const unsigned char lcd_bl_reset_cmd_4[] = {
 };
 
 static const unsigned char lcd_cmd_disp_on_1[] = {
-	0x0D, 0x04, 0x11, 0x00, 0x0D, 0x0D,
+	DELAY, 0x04,
+	0x11, 0x00,
+	DELAY, 0x0D,
 	0xB0, 0x01, 0x00,
 	0xC0, 0x07, 0x03, 0x21, 0x02, 0x23, 0x02, 0x07, 0x07,
 	0xB0, 0x01, 0x03,
 	0x29, 0x00,
-	0x0D, 0x01, 0xFF,
+	DELAY, 0x01,
+	END,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static const unsigned char lcd_cmd_disp_on_2[] = {
-	0x0D, 0x04, 0x11, 0x00, 0x0D, 0x0D,
+	DELAY, 0x04,
+	0x11, 0x00,
+	DELAY, 0x0D,
 	0xB0, 0x01, 0x00,
 	0xC0, 0x07, 0x03, 0x1F, 0x02, 0x23, 0x02, 0x07, 0x07,
 	0xB0, 0x01, 0x03,
 	0x29, 0x00,
-	0x0D, 0x01, 0xFF,
+	DELAY, 0x01,
+	END,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static const unsigned char lcd_cmd_disp_on_3[] = {
-	0x0D, 0x04, 0x11, 0x00, 0x0D, 0x0D,
+	DELAY, 0x04,
+	0x11, 0x00,
+	DELAY, 0x0D,
 	0xB0, 0x01, 0x00,
 	0xBB, 0x03, 0x08, 0xFF, 0x01,
 	0xB0, 0x01, 0x03,
-	0x0D, 0x04, 0x29, 0x00, 0x0D, 0x01,
-	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	DELAY, 0x04,
+	0x29, 0x00,
+	DELAY, 0x01,
+	END,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const unsigned char lcd_cmd_disp_off[] = {
+	0x28, 0x00,
+	DELAY, 0x08,
+	0x10, 0x00,
+	DELAY, 0x06,
+	END,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static const unsigned char lcd_cmd_colormode_0[] = {
@@ -116,6 +136,15 @@ static const unsigned char lcd_cmd_unk_1[] = {
 	0xB8, 0x05, 0x01, 0x1A, 0x18, 0x02, 0x40,
 	0xB0, 0x01, 0x03,
 	0xFF, 0x00, 0x00
+};
+
+static const unsigned char brightness_lut[] = {
+	0x1F, 0x25, 0x2B, 0x32,
+	0x3A, 0x43, 0x4D, 0x58,
+	0x64, 0x72, 0x81, 0x93,
+	0xA6, 0xB6, 0xCB, 0xE3,
+	0xFF,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static void lcd_spi_write_cmd(const struct lcd_spi_cmd *cmd)
@@ -249,11 +278,45 @@ static void lcd_spi_write_cmdlist(const struct lcd_spi_cmd *cmdlist)
 	}
 }
 
+static inline void lcd_i2c_bl_write_cmd(const struct lcd_i2c_bl_cmd *cmd)
+{
+	i2c_transfer_write(1, LCD_BACKLIGHT_I2C_ADDR, (void *)cmd, 2);
+}
+
 static void lcd_i2c_bl_write_cmdlist(const struct lcd_i2c_bl_cmd *cmdlist)
 {
-	while (cmdlist->reg != END) {
-		i2c_transfer_write(1, LCD_BACKLIGHT_I2C_ADDR, (void *)cmdlist, 2);
-		cmdlist++;
+	while (cmdlist->reg != END)
+		lcd_i2c_bl_write_cmd(cmdlist++);
+}
+
+static void lcd_bl_set_brightness(unsigned int brightness)
+{
+	unsigned int pwm;
+	struct lcd_i2c_bl_cmd cmd;
+
+	if (brightness == 0) {
+		lcd_spi_write_cmdlist((struct lcd_spi_cmd *)lcd_cmd_disp_off);
+		return;
+	} else if (brightness == 1) {
+		pwm = 0x19;
+	} else { /* brightness >= 2 */
+		pwm = brightness_lut[((brightness - 2) * 16) / 65534];
+	}
+
+	if (pwm == 0) {
+		cmd.reg = 5;
+		cmd.data = pwm;
+		lcd_i2c_bl_write_cmd(&cmd);
+		cmd.reg = 0xE;
+		cmd.data = pwm;
+		lcd_i2c_bl_write_cmd(&cmd);
+	} else {
+		cmd.reg = 0xE;
+		cmd.data = 1;
+		lcd_i2c_bl_write_cmd(&cmd);
+		cmd.reg = 5;
+		cmd.data = pwm;
+		lcd_i2c_bl_write_cmd(&cmd);
 	}
 }
 
@@ -324,10 +387,10 @@ static void lcd_read_ddb(unsigned short *supplier_id,
 		.data = {0, 0, 0, 0, 0, 0}
 	};
 
-	unsigned char ddb[5];
+	unsigned char ddb[12];
 
 	lcd_spi_write_cmd(&read_ddb_cmd);
-	lcd_spi_read(ddb, sizeof(ddb), 9);
+	lcd_spi_read(ddb, 6, 9);
 
 	if (supplier_id)
 		*supplier_id = ddb[0] | (ddb[1] << 8);
@@ -349,9 +412,11 @@ int lcd_init(void)
 
 	lcd_read_ddb(NULL, &supplier_elective_data);
 
+	lcd_display_on(supplier_elective_data);
+
 	lcd_bl_reset();
 
-	lcd_display_on(supplier_elective_data);
+	lcd_bl_set_brightness(65536 / 2);
 
 	return 0;
 }
