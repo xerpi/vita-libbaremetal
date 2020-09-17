@@ -21,6 +21,7 @@ SECTIONS
 	.bss ALIGN(4) (NOLOAD) : {
 		_bss_start = .;
 		*(.bss)
+		*(COMMON)
 		. = ALIGN(4);
 		_bss_end = .;
 	}

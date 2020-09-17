@@ -20,18 +20,12 @@ static const unsigned char msif_key[32] = {
 	0 /* Bring your own keys */
 };
 
-int main(struct sysroot_buffer *sysroot)
+int main(struct sysroot_buffer *sysroot, unsigned int cpu_id)
 {
-	unsigned int *bss;
-
-	if (get_cpu_id() != 0) {
+	if (cpu_id != 0) {
 		while (1)
 			wfe();
 	}
-
-	/* Clear BSS */
-	for (bss = &_bss_start; bss < &_bss_end; bss++)
-		*bss = 0;
 
 	sysroot_init(sysroot);
 
