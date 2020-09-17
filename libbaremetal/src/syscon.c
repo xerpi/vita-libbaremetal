@@ -1,52 +1,63 @@
 #include "syscon.h"
+#include "sysroot.h"
 #include "pervasive.h"
 #include "spi.h"
 #include "gpio.h"
 #include "utils.h"
 #include "libc.h"
 
-#define SYSCON_TX_CMD_LO	0
-#define SYSCON_TX_CMD_HI	1
-#define SYSCON_TX_LENGTH	2
-#define SYSCON_TX_DATA(i)	(3 + (i))
+static uint32_t g_baryon_version;
 
-#define SYSCON_RX_STATUS_LO	0
-#define SYSCON_RX_STATUS_HI	1
-#define SYSCON_RX_LENGTH	2
-#define SYSCON_RX_RESULT	3
-
-struct syscon_packet {
-	unsigned char tx[32];	/* tx[0..1] = cmd, tx[2] = length */
-	unsigned char rx[32];	/* rx[0..1] = status, rx[2] = length, rx[3] = result */
-};
-
-static void syscon_packet_start(struct syscon_packet *packet)
+int syscon_init(void)
 {
+	uint8_t version[SYSCON_RX_HEADER_SIZE + sizeof(g_baryon_version)];
+
+	spi_init(0);
+
+	gpio_set_port_mode(0, GPIO_PORT_SYSCON_OUT, GPIO_PORT_MODE_OUTPUT);
+	gpio_set_port_mode(0, GPIO_PORT_SYSCON_IN, GPIO_PORT_MODE_INPUT);
+	gpio_set_intr_mode(0, GPIO_PORT_SYSCON_IN, 3);
+
+	syscon_command_read(1, version, sizeof(version));
+	memcpy(&g_baryon_version, &version[SYSCON_RX_DATA], sizeof(g_baryon_version));
+
+	if (g_baryon_version > 0x1000003)
+		syscon_short_command_write(0x80, 0x12, 2);
+	else if (g_baryon_version > 0x70501)
+		syscon_short_command_write(0x80, 2, 2);
+
+	return 0;
+}
+
+static void syscon_raw_write(const uint8_t *buffer, int length)
+{
+	uint32_t hash = 0;
 	int i = 0;
-	unsigned char cmd_size = packet->tx[2];
-	unsigned char tx_total_size = cmd_size + 3;
-	unsigned int offset;
-	(void)offset;
 
 	gpio_port_clear(0, GPIO_PORT_SYSCON_OUT);
 	spi_write_start(0);
 
-	if (cmd_size <= 29) {
-		offset = 2;
-	} else {
-		/* TODO */
+	while (length >= 2) {
+		uint8_t lo = buffer[i];
+		uint8_t hi = buffer[i + 1];
+		spi_write(0, lo | ((uint32_t)hi << 8));
+		hash += lo + hi;
+		i += 2;
+		length -= 2;
 	}
 
-	do {
-		spi_write(0, (packet->tx[i + 1] << 8) | packet->tx[i]);
-		i += 2;
-	} while (i < tx_total_size);
+	if (length) {
+		hash = ~(hash + buffer[i]) & 0xFF;
+		spi_write(0, buffer[i] | ((uint32_t)hash << 8));
+	} else {
+		spi_write(0, ~hash & 0xFF);
+	}
 
 	spi_write_end(0);
 	gpio_port_set(0, GPIO_PORT_SYSCON_OUT);
 }
 
-static unsigned char syscon_cmd_sync(struct syscon_packet *packet)
+static void syscon_raw_read(uint8_t *buffer, int max_length)
 {
 	int i = 0;
 
@@ -56,85 +67,65 @@ static unsigned char syscon_cmd_sync(struct syscon_packet *packet)
 	gpio_acquire_intr(0, GPIO_PORT_SYSCON_IN);
 
 	while (spi_read_available(0)) {
-		unsigned int data = spi_read(0);
-		packet->rx[i] = data & 0xFF;
-		packet->rx[i + 1] = (data >> 8) & 0xFF;
+		uint32_t data = spi_read(0);
+		if (i < max_length)
+			buffer[i] = data & 0xFF;
+		if (i + 1 < max_length)
+			buffer[i + 1] = (data >> 8) & 0xFF;
 		i += 2;
 	}
 
 	spi_read_end(0);
 	gpio_port_clear(0, GPIO_PORT_SYSCON_OUT);
-
-	return packet->rx[SYSCON_RX_RESULT];
 }
 
-static void syscon_common_read(unsigned int *buffer, unsigned short cmd)
+void syscon_transfer(const uint8_t *tx, int tx_size, uint8_t *rx, int max_rx_size)
 {
-	struct syscon_packet packet;
-
-	packet.tx[SYSCON_TX_CMD_LO] = cmd & 0xFF;
-	packet.tx[SYSCON_TX_CMD_HI] = (cmd >> 8) & 0xFF;
-	packet.tx[SYSCON_TX_LENGTH] = 1;
-
-	memset(packet.rx, -1, sizeof(packet.rx));
-
-	syscon_packet_start(&packet);
-	syscon_cmd_sync(&packet);
-
-	memcpy(buffer, &packet.rx[4], packet.rx[SYSCON_RX_LENGTH] - 2);
-}
-
-static void syscon_common_write(unsigned int data, unsigned short cmd, unsigned int length)
-{
-	int i;
-	unsigned char hash, result;
-	struct syscon_packet packet;
-
-	packet.tx[SYSCON_TX_CMD_LO] = cmd & 0xFF;
-	packet.tx[SYSCON_TX_CMD_HI] = (cmd >> 8) & 0xFF;
-	packet.tx[SYSCON_TX_LENGTH] = length;
-
-	packet.tx[SYSCON_TX_DATA(0)] = data & 0xFF;
-	packet.tx[SYSCON_TX_DATA(1)] = (data >> 8) & 0xFF;
-	packet.tx[SYSCON_TX_DATA(2)] = (data >> 16) & 0xFF;
-	packet.tx[SYSCON_TX_DATA(3)] = (data >> 24) & 0xFF;
-
-	/*
-	 * Calculate packet hash
-	 */
-	hash = 0;
-	for (i = 0; i < length + 2; i++)
-		hash += packet.tx[i];
-
-	packet.tx[2 + length] = ~hash;
-	memset(&packet.tx[3 + length], -1, sizeof(packet.rx) - (3 + length));
+	uint8_t ret;
 
 	do {
-		memset(packet.rx, -1, sizeof(packet.rx));
-		syscon_packet_start(&packet);
-
-		result = syscon_cmd_sync(&packet);
-	} while (result == 0x80 || result == 0x81);
+		syscon_raw_write(tx, tx_size);
+		syscon_raw_read(rx, max_rx_size);
+		ret = rx[SYSCON_RX_RESULT];
+	} while (ret == 0x80 || ret == 0x81);
 }
 
-int syscon_init(void)
+void syscon_command_read(uint16_t cmd, void *buffer, int max_length)
 {
-	unsigned int syscon_version;
+	uint8_t tx[SYSCON_TX_HEADER_SIZE];
 
-	spi_init(0);
+	tx[SYSCON_TX_CMD_LO] = cmd & 0xFF;
+	tx[SYSCON_TX_CMD_HI] = (cmd >> 8) & 0xFF;
+	tx[SYSCON_TX_LENGTH] = 1;
 
-	gpio_set_port_mode(0, GPIO_PORT_SYSCON_OUT, GPIO_PORT_MODE_OUTPUT);
-	gpio_set_port_mode(0, GPIO_PORT_SYSCON_IN, GPIO_PORT_MODE_INPUT);
-	gpio_set_intr_mode(0, GPIO_PORT_SYSCON_IN, 3);
+	syscon_transfer(tx, sizeof(tx), buffer, max_length);
+}
 
-	syscon_common_read(&syscon_version, 1);
+void syscon_short_command_write(uint16_t cmd, uint32_t data, int length)
+{
+	uint8_t tx[SYSCON_TX_HEADER_SIZE + 4];
+	uint8_t rx[16];
 
-	if (syscon_version > 0x1000003)
-		syscon_common_write(0x12, 0x80, 3);
-	else if (syscon_version > 0x70501)
-		syscon_common_write(2, 0x80, 3);
+	tx[SYSCON_TX_CMD_LO] = cmd & 0xFF;
+	tx[SYSCON_TX_CMD_HI] = (cmd >> 8) & 0xFF;
+	tx[SYSCON_TX_LENGTH] = length + 1;
 
-	return 0;
+	tx[SYSCON_TX_DATA(0)] = data & 0xFF;
+	tx[SYSCON_TX_DATA(1)] = (data >> 8) & 0xFF;
+	tx[SYSCON_TX_DATA(2)] = (data >> 16) & 0xFF;
+	tx[SYSCON_TX_DATA(3)] = (data >> 24) & 0xFF;
+
+	syscon_transfer(tx, SYSCON_TX_HEADER_SIZE + length, rx, sizeof(rx));
+}
+
+int syscon_get_baryon_version(void)
+{
+	return g_baryon_version;
+}
+
+int syscon_get_hardware_info(void)
+{
+	return sysroot_get_hw_info();
 }
 
 void syscon_reset_device(int type, int mode)
@@ -144,15 +135,97 @@ void syscon_reset_device(int type, int mode)
 
 void syscon_set_hdmi_cdc_hpd(int enable)
 {
-	syscon_common_write(enable, 0x886, 2);
-}
-
-void syscon_ctrl_read(unsigned int *data)
-{
-	syscon_common_read(data, 0x101); // or 0x104
+	syscon_short_command_write(0x886, enable, 1);
 }
 
 void syscon_msif_set_power(int enable)
 {
-	syscon_common_write(enable, 0x89B, 2);
+	syscon_short_command_write(0x89B, enable, 1);
+}
+
+void syscon_ctrl_device_reset(unsigned int param_1, unsigned int param_2)
+{
+	syscon_short_command_write(0x88F, param_2 | (param_1 << 8), 2);
+}
+
+void syscon_get_touchpanel_device_info(struct syscon_touchpanel_device_info *info)
+{
+	unsigned char buffer[SYSCON_RX_HEADER_SIZE + sizeof(*info)];
+	uint8_t *data = &buffer[SYSCON_RX_DATA];
+
+	syscon_command_read(0x380, buffer, sizeof(buffer));
+
+	info->front_vendor_id  = (data[0] << 8) | data[1];
+	info->front_fw_version = (data[2] << 8) | data[3];
+	info->back_vendor_id   = (data[4] << 8) | data[5];
+	info->back_fw_version  = (data[6] << 8) | data[7];
+}
+
+void syscon_get_touchpanel_device_info_ext(struct syscon_touchpanel_device_info_ext *info)
+{
+	uint8_t buffer[SYSCON_RX_HEADER_SIZE + sizeof(*info)];
+	uint8_t *data = &buffer[SYSCON_RX_DATA];
+
+	syscon_command_read(0x390, buffer, sizeof(buffer));
+
+	info->front_vendor_id  = (data[0] << 8) | data[1];
+	info->front_fw_version = (data[2] << 8) | data[3];
+	info->front_unk1       = (data[4] << 8) | data[5];
+	info->front_unk2       = data[6];
+	info->front_unk3       = data[7];
+	info->unused1          = (data[9] << 8) | data[8];
+	info->back_vendor_id   = (data[10] << 8) | data[11];
+	info->back_fw_version  = (data[12] << 8) | data[13];
+	info->back_unk1        = (data[14] << 8) | data[15];
+	info->back_unk2        = data[16];
+	info->back_unk3        = data[17];
+	info->unused2          = (data[19] << 8) | data[18];
+}
+
+void syscon_get_touchpanel_unk_info_front(uint16_t *data)
+{
+	uint8_t buff[SYSCON_RX_HEADER_SIZE + 2];
+	syscon_command_read(0x3a7, buff, sizeof(buff));
+	*data = buff[SYSCON_RX_DATA] | ((uint16_t)buff[SYSCON_RX_DATA + 1] << 8);
+}
+
+void syscon_get_touchpanel_unk_info_back(uint16_t *data)
+{
+	uint8_t buff[SYSCON_RX_HEADER_SIZE + 2];
+	syscon_command_read(0x3b7, buff, sizeof(buff));
+	*data = buff[SYSCON_RX_DATA] | ((uint16_t)buff[SYSCON_RX_DATA + 1] << 8);
+}
+
+void syscon_touch_set_sampling_cycle(int cycles_front, int cycles_back)
+{
+	uint8_t buffer[SYSCON_TX_HEADER_SIZE + 8];
+	uint8_t rx[16];
+
+	buffer[0] = 0x87;
+	buffer[1] = 3;
+	buffer[2] = 9;
+
+	if (cycles_front >= 0) {
+		buffer[3] = 1;
+		buffer[4] = cycles_front & 0xFF;
+	} else {
+		buffer[3] = 0;
+		buffer[4] = 0;
+	}
+
+	buffer[5] = 0;
+	buffer[6] = 0;
+
+	if (cycles_back >= 0) {
+		buffer[7] = 1;
+		buffer[8] = cycles_back & 0xFF;
+	} else {
+		buffer[7] = 0;
+		buffer[8] = 0;
+	}
+
+	buffer[9] = 0;
+	buffer[10] = 0;
+
+	syscon_transfer(buffer, sizeof(buffer), rx, sizeof(rx));
 }

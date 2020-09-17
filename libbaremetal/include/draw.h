@@ -13,7 +13,8 @@
 #define CYAN			RGBA8(0,   255, 255, 255)
 #define PINK			RGBA8(255, 0,   255, 255)
 #define LIME			RGBA8(50,  205, 50,  255)
-#define PURP			RGBA8(147, 112, 219, 255)
+#define PURPLE			RGBA8(147, 112, 219, 255)
+#define ORANGE			RGBA8(255, 128, 0,   255)
 #define WHITE			RGBA8(255, 255, 255, 255)
 #define BLACK			RGBA8(0,   0,   0,   255)
 
