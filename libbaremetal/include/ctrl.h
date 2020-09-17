@@ -1,8 +1,10 @@
 #ifndef CTRL_H
 #define CTRL_H
 
-#define CTRL_BUTTON_HELD(ctrl, button)		!((ctrl) & (button))
-#define CTRL_BUTTON_PRESSED(ctrl, old, button)	!(((ctrl) & ~(old)) & (button))
+#include <stdint.h>
+
+#define CTRL_BUTTON_HELD(ctrl, button)		((ctrl) & (button))
+#define CTRL_BUTTON_PRESSED(ctrl, old, button)	(((ctrl) & ~(old)) & (button))
 
 #define CTRL_UP		(1 << 0)
 #define CTRL_RIGHT	(1 << 1)
@@ -22,6 +24,15 @@
 #define CTRL_VOLDOWN	(1 << 17)
 #define CTRL_HEADPHONE	(1 << 27)
 
-void ctrl_read(unsigned int *data);
+struct ctrl_data {
+	uint32_t buttons;
+	uint8_t lx;
+	uint8_t ly;
+	uint8_t rx;
+	uint8_t ry;
+};
+
+void ctrl_read(struct ctrl_data *data);
+void ctrl_set_analog_sampling(int enabled);
 
 #endif
