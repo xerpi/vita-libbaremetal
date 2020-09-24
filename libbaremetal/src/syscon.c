@@ -1,5 +1,4 @@
 #include "syscon.h"
-#include "sysroot.h"
 #include "pervasive.h"
 #include "spi.h"
 #include "gpio.h"
@@ -7,10 +6,12 @@
 #include "libc.h"
 
 static uint32_t g_baryon_version;
+static uint32_t g_hardware_info;
 
 int syscon_init(void)
 {
-	uint8_t version[SYSCON_RX_HEADER_SIZE + sizeof(g_baryon_version)];
+	uint8_t baryon_version[SYSCON_RX_HEADER_SIZE + sizeof(g_baryon_version)];
+	uint8_t hw_info[SYSCON_RX_HEADER_SIZE + sizeof(g_hardware_info)];
 
 	spi_init(0);
 
@@ -18,13 +19,16 @@ int syscon_init(void)
 	gpio_set_port_mode(0, GPIO_PORT_SYSCON_IN, GPIO_PORT_MODE_INPUT);
 	gpio_set_intr_mode(0, GPIO_PORT_SYSCON_IN, 3);
 
-	syscon_command_read(1, version, sizeof(version));
-	memcpy(&g_baryon_version, &version[SYSCON_RX_DATA], sizeof(g_baryon_version));
+	syscon_command_read(1, baryon_version, sizeof(baryon_version));
+	memcpy(&g_baryon_version, &baryon_version[SYSCON_RX_DATA], sizeof(g_baryon_version));
 
 	if (g_baryon_version > 0x1000003)
 		syscon_short_command_write(0x80, 0x12, 2);
 	else if (g_baryon_version > 0x70501)
 		syscon_short_command_write(0x80, 2, 2);
+
+	syscon_command_read(5, hw_info, sizeof(hw_info));
+	memcpy(&g_hardware_info, &hw_info[SYSCON_RX_DATA], sizeof(g_hardware_info));
 
 	return 0;
 }
@@ -125,7 +129,7 @@ int syscon_get_baryon_version(void)
 
 int syscon_get_hardware_info(void)
 {
-	return sysroot_get_hw_info();
+	return g_hardware_info;
 }
 
 void syscon_reset_device(int type, int mode)

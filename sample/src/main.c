@@ -95,11 +95,11 @@ int main(struct sysroot_buffer *sysroot, unsigned int cpu_id)
 		struct ctrl_data ctrl;
 		ctrl_read(&ctrl);
 
-		draw_rectangle(960/2 + ctrl.lx - 128, 544/2 + ctrl.ly - 128, 10, 10, ORANGE);
-		draw_rectangle(960/2 + ctrl.rx - 128, 544/2 + ctrl.ry - 128, 10, 10, CYAN);
+		draw_rectangle(960/2 + ctrl.lx - 128, 544/2 + ctrl.ly - 128 - 4, 8, 8, ORANGE);
+		draw_rectangle(960/2 + ctrl.rx - 128, 544/2 + ctrl.ry - 128 - 4, 8, 8, CYAN);
 
 		static const uint32_t colors[] = {
-			RED, GREEN, WHITE, BLUE, YELLOW, CYAN, ORANGE, PINK, LIME, PURPLE,
+			RED, GREEN, BLUE, YELLOW, WHITE, CYAN, ORANGE, PINK, LIME, PURPLE,
 		};
 
 		struct touch_data touch;
