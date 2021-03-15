@@ -7,11 +7,13 @@
 
 static uint32_t g_baryon_version;
 static uint32_t g_hardware_info;
+static uint8_t g_hardware_flags[16];
 
 int syscon_init(void)
 {
 	uint8_t baryon_version[SYSCON_RX_HEADER_SIZE + sizeof(g_baryon_version)];
 	uint8_t hw_info[SYSCON_RX_HEADER_SIZE + sizeof(g_hardware_info)];
+	uint8_t hw_flags[SYSCON_RX_HEADER_SIZE + sizeof(g_hardware_flags)];
 
 	spi_init(0);
 
@@ -29,6 +31,9 @@ int syscon_init(void)
 
 	syscon_command_read(5, hw_info, sizeof(hw_info));
 	memcpy(&g_hardware_info, &hw_info[SYSCON_RX_DATA], sizeof(g_hardware_info));
+
+	syscon_command_read(6, hw_flags, sizeof(hw_flags));
+	memcpy(g_hardware_flags, &hw_flags[SYSCON_RX_DATA], sizeof(g_hardware_flags));
 
 	return 0;
 }

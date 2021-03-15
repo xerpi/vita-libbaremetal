@@ -89,6 +89,8 @@ int main(struct sysroot_buffer *sysroot, unsigned int cpu_id)
 	font_draw_stringf(50, 180, WHITE, "Memory Card inserted: %d",
 		pervasive_msif_get_card_insert_state());
 
+	font_draw_stringf(50, 200, WHITE, "SYSCON HW Info: 0x%08X", syscon_get_hardware_info());
+
 	while (1) {
 		static int i = 0;
 
