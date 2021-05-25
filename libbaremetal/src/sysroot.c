@@ -41,7 +41,7 @@ int sysroot_model_is_dolce(void)
 	if (device_config & 0x200)
 		return 1;
 
-	if (!sysroot_model_is_unk())
+	if (!sysroot_model_is_diag())
 		return 0;
 
 	if ((hw_info_mask == 0x700000) || (hw_info_mask == 0x720000) || (hw_info_mask == 0x510000))
@@ -63,7 +63,7 @@ int sysroot_model_is_vita2k(void)
 	return 0;
 }
 
-int sysroot_model_is_unk(void)
+int sysroot_model_is_diag(void)
 {
 	const unsigned short device_config = __builtin_bswap16(sysroot->device_config);
 	const unsigned short device_type = __builtin_bswap16(sysroot->device_type);
@@ -72,7 +72,7 @@ int sysroot_model_is_unk(void)
 	if (device_type != 0x103 || device_config != 0x10)
 		return 0;
 
-	if (type <= 0x24)
+	if (type == 0x24)
 		return 1;
 
 	return 0;

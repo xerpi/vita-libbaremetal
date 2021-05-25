@@ -54,7 +54,7 @@ unsigned int sysroot_get_hw_info(void);
 int sysroot_model_is_vita(void);
 int sysroot_model_is_dolce(void);
 int sysroot_model_is_vita2k(void);
-int sysroot_model_is_unk(void);
+int sysroot_model_is_diag(void);
 int sysroot_is_au_codec_ic_conexant(void);
 
 #endif
