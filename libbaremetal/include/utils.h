@@ -6,8 +6,8 @@
 #define BIT(x)		(1 << (x))
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
-#define dmb() asm volatile("dmb\n\t")
-#define dsb() asm volatile("dsb\n\t")
+#define dmb() asm volatile("dmb\n\t" ::: "memory")
+#define dsb() asm volatile("dsb\n\t" ::: "memory")
 #define wfe() asm volatile("wfe\n\t")
 
 static inline unsigned int rbit(unsigned int x)
@@ -19,32 +19,37 @@ static inline unsigned int rbit(unsigned int x)
 
 static inline unsigned char readb(volatile void *addr)
 {
-	return *(unsigned char *)addr;
+	return *(volatile unsigned char *)addr;
 }
 
 static inline unsigned short readw(volatile void *addr)
 {
-	return *(unsigned short *)addr;
+	dsb();
+	return *(volatile unsigned short *)addr;
 }
 
 static inline unsigned int readl(volatile void *addr)
 {
-	return *(unsigned int *)addr;
+	dsb();
+	return *(volatile unsigned int *)addr;
 }
 
 static inline void writeb(unsigned char val, volatile void *addr)
 {
-	*(unsigned char *)addr = val;
+	*(volatile unsigned char *)addr = val;
+	dsb();
 }
 
 static inline void writew(unsigned short val, volatile void *addr)
 {
-	*(unsigned short *)addr = val;
+	*(volatile unsigned short *)addr = val;
+	dsb();
 }
 
 static inline void writel(unsigned int val, volatile void *addr)
 {
-	*(unsigned int *)addr = val;
+	*(volatile unsigned int *)addr = val;
+	dsb();
 }
 
 static inline uint64_t be_uint64_t_load(const void *addr)

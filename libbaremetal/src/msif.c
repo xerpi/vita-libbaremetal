@@ -430,7 +430,7 @@ static void msif_reset_sub_C286C4(void)
 static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 			unsigned int *write_protected)
 {
-	unsigned int type;
+	unsigned int type = 0;
 	struct ms_status_registers status;
 
 	ms_read_reg(0, &status, sizeof(status));
