@@ -131,6 +131,9 @@ int main(struct sysroot_buffer *sysroot, unsigned int cpu_id)
 			gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
 		else
 			gpio_port_clear(0, GPIO_PORT_GAMECARD_LED);
+
+		/* Add some delay between iterations, otherwise no touch data is reported */
+		delay(100);
 	}
 
 	syscon_reset_device(SYSCON_RESET_TYPE_COLD_RESET, 0);
