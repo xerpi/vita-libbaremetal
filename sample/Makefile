@@ -8,7 +8,7 @@ CC	= $(PREFIX)-gcc
 AS	= $(PREFIX)-as
 OBJCOPY	= $(PREFIX)-objcopy
 CFLAGS	= -I$(INCDIR) -mcpu=cortex-a9 -mthumb-interwork -mno-unaligned-access \
-	  -O0 -g3 -Wall -Wno-unused-const-variable -Wno-main
+	  -O2 -g3 -Wall -Wno-unused-const-variable -Wno-main
 LDFLAGS	= -T linker.ld -nostartfiles -nostdlib -lgcc -lm -lbaremetal
 ASFLAGS	=
 DEPS	= $(OBJS:.o=.d)

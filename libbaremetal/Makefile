@@ -12,7 +12,7 @@ PREFIX	= arm-vita-eabi
 CC	= $(PREFIX)-gcc
 AR	= $(PREFIX)-ar
 CFLAGS	= -I$(INCDIR) -I$(MBEDTLS)/include -mcpu=cortex-a9 -mthumb-interwork \
-	  -O0 -Wall -Wno-unused-const-variable
+	  -O2 -g3 -Wall -Wno-unused-const-variable
 ASFLAGS	=
 DEPS	= $(OBJS:.o=.d)
 
