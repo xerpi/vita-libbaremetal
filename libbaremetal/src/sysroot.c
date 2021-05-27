@@ -19,7 +19,7 @@ int sysroot_model_is_vita(void)
 	if ((device_type - 0x100 > 0x11) || sysroot_model_is_dolce()) {
 		const unsigned int hw_info_mask = sysroot->hw_info & 0xFF0000;
 
-		if (!sysroot_model_is_unk())
+		if (!sysroot_model_is_diag())
 			return 0;
 
 		if ((hw_info_mask == 0x700000) || (hw_info_mask == 0x720000) || (hw_info_mask == 0x510000))
