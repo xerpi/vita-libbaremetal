@@ -6,6 +6,24 @@
 
 #define GPIO_REGS(i)			((void *)((i) == 0 ? GPIO0_BASE_ADDR : GPIO1_BASE_ADDR))
 
+#define GPIO_DIRECTION		0x00
+#define GPIO_READ		0x04
+#define GPIO_SET		0x08
+#define GPIO_CLEAR		0x0C
+#define GPIO_INT_MODE_0_15	0x14
+#define GPIO_INT_MODE_16_31	0x18
+#define GPIO_INT_MASK_GATE0	0x1C
+#define GPIO_INT_MASK_GATE1	0x20
+#define GPIO_INT_MASK_GATE2	0x24
+#define GPIO_INT_MASK_GATE3	0x28
+#define GPIO_INT_MASK_GATE4	0x2C
+#define GPIO_READ_LATCH		0x34
+#define GPIO_INT_STATUS_GATE0	0x38
+#define GPIO_INT_STATUS_GATE1	0x3C
+#define GPIO_INT_STATUS_GATE2	0x40
+#define GPIO_INT_STATUS_GATE3	0x44
+#define GPIO_INT_STATUS_GATE4	0x48
+
 void gpio_set_port_mode(int bus, int port, int mode)
 {
 	volatile unsigned int *gpio_regs = GPIO_REGS(bus);

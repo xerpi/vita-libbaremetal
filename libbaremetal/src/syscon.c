@@ -19,7 +19,7 @@ int syscon_init(void)
 
 	gpio_set_port_mode(0, GPIO_PORT_SYSCON_OUT, GPIO_PORT_MODE_OUTPUT);
 	gpio_set_port_mode(0, GPIO_PORT_SYSCON_IN, GPIO_PORT_MODE_INPUT);
-	gpio_set_intr_mode(0, GPIO_PORT_SYSCON_IN, 3);
+	gpio_set_intr_mode(0, GPIO_PORT_SYSCON_IN, GPIO_INT_MODE_FALLING_EDGE);
 
 	syscon_command_read(1, baryon_version, sizeof(baryon_version));
 	memcpy(&g_baryon_version, &baryon_version[SYSCON_RX_DATA], sizeof(g_baryon_version));
