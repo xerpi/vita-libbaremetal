@@ -20,7 +20,7 @@ struct touch_data {
 	uint32_t num_front;
 	uint32_t num_back;
 	struct touch_report front[TOUCH_MAX_REPORT_FRONT];
-	struct touch_report back[TOUCH_MAX_REPORT_FRONT];
+	struct touch_report back[TOUCH_MAX_REPORT_BACK];
 };
 
 void touch_init(void);
