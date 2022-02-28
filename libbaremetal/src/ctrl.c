@@ -14,7 +14,7 @@ void ctrl_read(struct ctrl_data *data)
 	syscon_command_read(0x101, buffer, sizeof(buffer));
 
 	data->buttons = (buffer[4] | (buffer[5] << 8) | (buffer[6] << 16) |
-	                (buffer[6] << 24)) ^ 0x4037fcf9;
+			(buffer[6] << 24)) ^ 0x4037fcf9;
 	data->lx = buffer[8];
 	data->ly = buffer[9];
 	data->rx = buffer[10];

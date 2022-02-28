@@ -47,6 +47,8 @@ int syscon_init(void);
 void syscon_transfer(const uint8_t *tx, int tx_size, uint8_t *rx, int max_rx_size);
 void syscon_command_read(uint16_t cmd, void *buffer, int max_length);
 void syscon_short_command_write(uint16_t cmd, uint32_t data, int length);
+int syscon_scratchpad_read(uint16_t offset, void *buffer, int size);
+int syscon_scratchpad_write(uint16_t offset, const void *buffer, int size);
 int syscon_get_baryon_version(void);
 int syscon_get_hardware_info(void);
 void syscon_reset_device(int type, int mode);

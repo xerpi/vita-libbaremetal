@@ -113,7 +113,7 @@ void syscon_command_read(uint16_t cmd, void *buffer, int max_length)
 void syscon_short_command_write(uint16_t cmd, uint32_t data, int length)
 {
 	uint8_t tx[SYSCON_TX_HEADER_SIZE + 4];
-	uint8_t rx[16];
+	uint8_t rx[32];
 
 	tx[SYSCON_TX_CMD_LO] = cmd & 0xFF;
 	tx[SYSCON_TX_CMD_HI] = (cmd >> 8) & 0xFF;
@@ -125,6 +125,51 @@ void syscon_short_command_write(uint16_t cmd, uint32_t data, int length)
 	tx[SYSCON_TX_DATA(3)] = (data >> 24) & 0xFF;
 
 	syscon_transfer(tx, SYSCON_TX_HEADER_SIZE + length, rx, sizeof(rx));
+}
+
+int syscon_scratchpad_read(uint16_t offset, void *buffer, int size)
+{
+	uint8_t tx[SYSCON_TX_HEADER_SIZE + 3];
+	uint8_t rx[32];
+
+	if ((size - 1 >= 0x18) || ((size + offset) >= 0x101))
+		return -1;
+
+	tx[SYSCON_TX_CMD_LO] = 0x90;
+	tx[SYSCON_TX_CMD_HI] = 0;
+	tx[SYSCON_TX_LENGTH] = 4;
+
+	tx[SYSCON_TX_DATA(0)] = offset & 0xFF;
+	tx[SYSCON_TX_DATA(1)] = (offset >> 8) & 0xFF;
+	tx[SYSCON_TX_DATA(2)] = size;
+
+	syscon_transfer(tx, sizeof(tx), rx, sizeof(rx));
+
+	memcpy(buffer, &rx[SYSCON_RX_DATA], size);
+
+	return 0;
+}
+
+int syscon_scratchpad_write(uint16_t offset, const void *buffer, int size)
+{
+	uint8_t tx[32];
+	uint8_t rx[32];
+
+	if ((size - 1 >= 0x18) || ((size + offset) >= 0x101))
+		return -1;
+
+	tx[SYSCON_TX_CMD_LO] = 0x91;
+	tx[SYSCON_TX_CMD_HI] = 0;
+	tx[SYSCON_TX_LENGTH] = size + 4;
+
+	tx[SYSCON_TX_DATA(0)] = offset & 0xFF;
+	tx[SYSCON_TX_DATA(1)] = (offset >> 8) & 0xFF;
+	tx[SYSCON_TX_DATA(2)] = size;
+	memcpy(&tx[SYSCON_TX_DATA(3)], buffer, size);
+
+	syscon_transfer(tx, SYSCON_TX_HEADER_SIZE + 3 + size, rx, sizeof(rx));
+
+	return 0;
 }
 
 int syscon_get_baryon_version(void)
@@ -208,31 +253,17 @@ void syscon_get_touchpanel_unk_info_back(uint16_t *data)
 void syscon_touch_set_sampling_cycle(int cycles_front, int cycles_back)
 {
 	uint8_t buffer[SYSCON_TX_HEADER_SIZE + 8];
-	uint8_t rx[16];
+	uint8_t rx[32];
 
 	buffer[0] = 0x87;
 	buffer[1] = 3;
 	buffer[2] = 9;
-
-	if (cycles_front >= 0) {
-		buffer[3] = 1;
-		buffer[4] = cycles_front & 0xFF;
-	} else {
-		buffer[3] = 0;
-		buffer[4] = 0;
-	}
-
+	buffer[3] = (cycles_front >= 0) ? 1 : 0;
+	buffer[4] = (cycles_front >= 0) ? cycles_front & 0xFF : 0;
 	buffer[5] = 0;
 	buffer[6] = 0;
-
-	if (cycles_back >= 0) {
-		buffer[7] = 1;
-		buffer[8] = cycles_back & 0xFF;
-	} else {
-		buffer[7] = 0;
-		buffer[8] = 0;
-	}
-
+	buffer[7] = (cycles_back >= 0) ? 1 : 0;
+	buffer[8] = (cycles_back >= 0) ? cycles_back & 0xFF : 0;
 	buffer[9] = 0;
 	buffer[10] = 0;
 
