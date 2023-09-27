@@ -21,7 +21,7 @@ Simultaneously, I have also been updating and documenting [wiki.henkaku.xyz](htt
 
 **Memory card authentication**:
 
-For the Memory card authentication to work, you will have to place the key used by [`rmauth_sm`'s command 0x2](https://wiki.henkaku.xyz/vita/F00D_Commands#rmauth_sm.self) in the `msif.c` file.
+For the Memory card authentication to work, you will have to place the key used by [`rmauth_sm`'s command 0x2](https://wiki.henkaku.xyz/vita/Secure_Modules_Functions#rmauth_sm.self) in the `msif.c` file.
 
 Check [this](https://wiki.henkaku.xyz/vita/Keys) for more information.
 
