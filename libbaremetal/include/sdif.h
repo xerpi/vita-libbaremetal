@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "mmc.h"
+#include "sdhci.h"
 
 enum sdif_device {
 	SDIF_DEVICE_EMMC = 0,
@@ -21,5 +23,8 @@ enum sdif_bus_voltage {
 int sdif_init(enum sdif_device device);
 bool sdif_is_card_inserted(enum sdif_device device);
 void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage voltage);
+
+int sdif_send_cmd(enum sdif_device device, struct mmc_cmd *cmd, struct mmc_data *data);
+int sdif_mmc_go_idle(enum sdif_device device);
 
 #endif

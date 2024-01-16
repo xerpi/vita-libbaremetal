@@ -4,9 +4,19 @@
 #include "syscon.h"
 #include "sysroot.h"
 #include "utils.h"
+#include "uart.h"
+
+#define printf(...) uart_printf(0, __VA_ARGS__)
+#define puts(...) uart_puts(0, __VA_ARGS__)
+#define udelay(x) delay(x)
+#define get_timer(x) ((void)x, 0)
 
 #define SDIF_RESET_HW (1 << 0)
 #define SDIF_RESET_SW (1 << 1)
+
+#define SDHCI_CMD_MAX_TIMEOUT			3200
+#define SDHCI_CMD_DEFAULT_TIMEOUT		100
+#define SDHCI_READ_STATUS_TIMEOUT		1000
 
 static uint32_t g_timeout_control[SDIF_DEVICE__MAX];
 static uint32_t g_unk_18[SDIF_DEVICE__MAX];
@@ -82,6 +92,31 @@ static volatile sd_mmc_registers *sdif_registers(enum sdif_device device)
 	default:
 		return NULL;
 	}
+}
+
+static inline uint8_t sdhci_readb(enum sdif_device device, uint32_t reg)
+{
+	return read8((uintptr_t)sdif_registers(device) + reg);
+}
+
+static inline uint32_t sdhci_readl(enum sdif_device device, uint32_t reg)
+{
+	return read32((uintptr_t)sdif_registers(device) + reg);
+}
+
+static inline void sdhci_writeb(enum sdif_device device, uint8_t val, uint32_t reg)
+{
+	write8(val, (uintptr_t)sdif_registers(device) + reg);
+}
+
+static inline void sdhci_writew(enum sdif_device device, uint16_t val, uint32_t reg)
+{
+	write16(val, (uintptr_t)sdif_registers(device) + reg);
+}
+
+static inline void sdhci_writel(enum sdif_device device, uint32_t val, uint32_t reg)
+{
+	write32(val, (uintptr_t)sdif_registers(device) + reg);
 }
 
 static int sdif_reset(enum sdif_device device, int flags)
@@ -306,4 +341,193 @@ void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage volt
 
 		host_regs->host_control1 = 0;
 	}
+}
+
+static void sdhci_reset(enum sdif_device host, uint8_t mask)
+{
+	unsigned long timeout;
+
+	/* Wait max 100 ms */
+	timeout = 100;
+	sdhci_writeb(host, mask, SDHCI_SOFTWARE_RESET);
+	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
+		if (timeout == 0) {
+			printf("%s: Reset 0x%x never completed.\n",
+			       __func__, (int)mask);
+			return;
+		}
+		timeout--;
+		udelay(1000);
+	}
+}
+
+static void sdhci_cmd_done(enum sdif_device host, struct mmc_cmd *cmd)
+{
+	int i;
+	if (cmd->resp_type & MMC_RSP_136) {
+		/* CRC is stripped so we need to do some shifting. */
+		for (i = 0; i < 4; i++) {
+			cmd->response[i] = sdhci_readl(host,
+					SDHCI_RESPONSE + (3-i)*4) << 8;
+			if (i != 3)
+				cmd->response[i] |= sdhci_readb(host,
+						SDHCI_RESPONSE + (3-i)*4-1);
+		}
+	} else {
+		cmd->response[0] = sdhci_readl(host, SDHCI_RESPONSE);
+	}
+}
+
+int sdif_send_cmd(enum sdif_device host, struct mmc_cmd *cmd, struct mmc_data *data)
+{
+	unsigned int stat = 0;
+	int ret = 0;
+	int trans_bytes = 0, is_aligned = 1;
+	uint32_t mask, flags, mode = 0;
+	uint32_t time = 0;
+	uint64_t start = get_timer(0);
+	/* Timeout unit - ms */
+	static unsigned int cmd_timeout = SDHCI_CMD_DEFAULT_TIMEOUT;
+
+	mask = SDHCI_CMD_INHIBIT | SDHCI_DATA_INHIBIT;
+
+	/* We shouldn't wait for data inihibit for stop commands, even
+	   though they might use busy signaling */
+	if (cmd->cmdidx == MMC_CMD_STOP_TRANSMISSION ||
+	    ((cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK ||
+	      cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200) && !data))
+		mask &= ~SDHCI_DATA_INHIBIT;
+
+	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
+		if (time >= cmd_timeout) {
+			printf("%s: MMC: %d busy ", __func__, host);
+			if (2 * cmd_timeout <= SDHCI_CMD_MAX_TIMEOUT) {
+				cmd_timeout += cmd_timeout;
+				printf("timeout increasing to: %u ms.\n",
+				       cmd_timeout);
+			} else {
+				puts("timeout.\n");
+				return -1;
+			}
+		}
+		time++;
+		udelay(1000);
+	}
+
+	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
+
+	mask = SDHCI_INT_RESPONSE;
+	if ((cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK ||
+	     cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200) && !data)
+		mask = SDHCI_INT_DATA_AVAIL;
+
+	if (!(cmd->resp_type & MMC_RSP_PRESENT))
+		flags = SDHCI_CMD_RESP_NONE;
+	else if (cmd->resp_type & MMC_RSP_136)
+		flags = SDHCI_CMD_RESP_LONG;
+	else if (cmd->resp_type & MMC_RSP_BUSY) {
+		flags = SDHCI_CMD_RESP_SHORT_BUSY;
+		mask |= SDHCI_INT_DATA_END;
+	} else
+		flags = SDHCI_CMD_RESP_SHORT;
+
+	if (cmd->resp_type & MMC_RSP_CRC)
+		flags |= SDHCI_CMD_CRC;
+	if (cmd->resp_type & MMC_RSP_OPCODE)
+		flags |= SDHCI_CMD_INDEX;
+	if (data || cmd->cmdidx ==  MMC_CMD_SEND_TUNING_BLOCK ||
+	    cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200)
+		flags |= SDHCI_CMD_DATA;
+
+	/* Set Transfer mode regarding to data flag */
+	if (data) {
+		sdhci_writeb(host, 0xe, SDHCI_TIMEOUT_CONTROL);
+
+		//if (!(host->quirks & SDHCI_QUIRK_SUPPORT_SINGLE))
+		//	mode = SDHCI_TRNS_BLK_CNT_EN;
+		trans_bytes = data->blocks * data->blocksize;
+		if (data->blocks > 1)
+			mode |= SDHCI_TRNS_MULTI | SDHCI_TRNS_BLK_CNT_EN;
+
+		if (data->flags == MMC_DATA_READ)
+			mode |= SDHCI_TRNS_READ;
+
+		/*if (host->flags & USE_DMA) {
+			mode |= SDHCI_TRNS_DMA;
+			sdhci_prepare_dma(host, data, &is_aligned, trans_bytes);
+		}*/
+
+		sdhci_writew(host, SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG,
+				data->blocksize),
+				SDHCI_BLOCK_SIZE);
+		sdhci_writew(host, data->blocks, SDHCI_BLOCK_COUNT);
+		sdhci_writew(host, mode, SDHCI_TRANSFER_MODE);
+	} else if (cmd->resp_type & MMC_RSP_BUSY) {
+		sdhci_writeb(host, 0xe, SDHCI_TIMEOUT_CONTROL);
+	}
+
+	sdhci_writel(host, cmd->cmdarg, SDHCI_ARGUMENT);
+	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->cmdidx, flags), SDHCI_COMMAND);
+	start = get_timer(0);
+	do {
+		stat = sdhci_readl(host, SDHCI_INT_STATUS);
+		if (stat & SDHCI_INT_ERROR)
+			break;
+
+		/*if (host->quirks & SDHCI_QUIRK_BROKEN_R1B &&
+		    cmd->resp_type & MMC_RSP_BUSY && !data) {
+			unsigned int state =
+				sdhci_readl(host, SDHCI_PRESENT_STATE);
+
+			if (!(state & SDHCI_DAT_ACTIVE))
+				return 0;
+		}*/
+
+		if (get_timer(start) >= SDHCI_READ_STATUS_TIMEOUT) {
+			printf("%s: Timeout for status update: %08x %08x\n",
+			       __func__, stat, mask);
+			return -2;
+		}
+	} while ((stat & mask) != mask);
+
+	if ((stat & (SDHCI_INT_ERROR | mask)) == mask) {
+		sdhci_cmd_done(host, cmd);
+		sdhci_writel(host, mask, SDHCI_INT_STATUS);
+	} else
+		ret = -1;
+
+	/*if (!ret && data)
+		ret = sdhci_transfer_data(host, data);*/
+
+	/*if (host->quirks & SDHCI_QUIRK_WAIT_SEND_CMD)
+		udelay(1000);*/
+
+	stat = sdhci_readl(host, SDHCI_INT_STATUS);
+	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
+	if (!ret) {
+		/*if ((host->quirks & SDHCI_QUIRK_32BIT_DMA_ADDR) &&
+				!is_aligned && (data->flags == MMC_DATA_READ))
+			memcpy(data->dest, host->align_buffer, trans_bytes);*/
+		return 0;
+	}
+
+	sdhci_reset(host, SDHCI_RESET_CMD);
+	sdhci_reset(host, SDHCI_RESET_DATA);
+	if (stat & SDHCI_INT_TIMEOUT)
+		return -2;
+	else
+		return -1;
+
+	return 0;
+}
+
+int sdif_mmc_go_idle(enum sdif_device device)
+{
+	struct mmc_cmd cmd;
+
+	cmd.cmdidx = MMC_CMD_GO_IDLE_STATE;
+	cmd.cmdarg = 0;
+	cmd.resp_type = MMC_RSP_NONE;
+
+	return sdif_send_cmd(device, &cmd, NULL);
 }
