@@ -17,17 +17,17 @@
 #define END 0xFF
 
 struct lcd_spi_cmd {
-	unsigned char cmd;
-	unsigned char size;
-	unsigned char data[];
+	uint8_t cmd;
+	uint8_t size;
+	uint8_t data[];
 };
 
 struct lcd_i2c_bl_cmd {
-	unsigned char reg;
-	unsigned char data;
+	uint8_t reg;
+	uint8_t data;
 };
 
-static const unsigned char lcd_bl_reset_cmd_1[] = {
+static const uint8_t lcd_bl_reset_cmd_1[] = {
 	0x01, 0x01,
 	0x03, 0x05,
 	0x05, 0xFF,
@@ -35,7 +35,7 @@ static const unsigned char lcd_bl_reset_cmd_1[] = {
 	END, END
 };
 
-static const unsigned char lcd_bl_reset_cmd_2[] = {
+static const uint8_t lcd_bl_reset_cmd_2[] = {
 	0x01, 0x11,
 	0x03, 0x01,
 	0x05, 0xFF,
@@ -43,7 +43,7 @@ static const unsigned char lcd_bl_reset_cmd_2[] = {
 	END, END
 };
 
-static const unsigned char lcd_bl_reset_cmd_3[] = {
+static const uint8_t lcd_bl_reset_cmd_3[] = {
 	0x01, 0x11,
 	0x03, 0x01,
 	0x04, 0x00,
@@ -53,7 +53,7 @@ static const unsigned char lcd_bl_reset_cmd_3[] = {
 	END, END
 };
 
-static const unsigned char lcd_bl_reset_cmd_4[] = {
+static const uint8_t lcd_bl_reset_cmd_4[] = {
 	0x01, 0x11,
 	0x03, 0x05,
 	0x05, 0xFF,
@@ -61,7 +61,7 @@ static const unsigned char lcd_bl_reset_cmd_4[] = {
 	END, END
 };
 
-static const unsigned char lcd_cmd_disp_on_1[] = {
+static const uint8_t lcd_cmd_disp_on_1[] = {
 	DELAY, 0x04,
 	0x11, 0x00,
 	DELAY, 0x0D,
@@ -74,7 +74,7 @@ static const unsigned char lcd_cmd_disp_on_1[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_disp_on_2[] = {
+static const uint8_t lcd_cmd_disp_on_2[] = {
 	DELAY, 0x04,
 	0x11, 0x00,
 	DELAY, 0x0D,
@@ -87,7 +87,7 @@ static const unsigned char lcd_cmd_disp_on_2[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_disp_on_3[] = {
+static const uint8_t lcd_cmd_disp_on_3[] = {
 	DELAY, 0x04,
 	0x11, 0x00,
 	DELAY, 0x0D,
@@ -101,7 +101,7 @@ static const unsigned char lcd_cmd_disp_on_3[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_disp_off[] = {
+static const uint8_t lcd_cmd_disp_off[] = {
 	0x28, 0x00,
 	DELAY, 0x08,
 	0x10, 0x00,
@@ -110,35 +110,35 @@ static const unsigned char lcd_cmd_disp_off[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_colormode_0[] = {
+static const uint8_t lcd_cmd_colormode_0[] = {
 	0xB0, 0x01, 0x04,
 	0xC9, 0x01, 0x00,
 	0xB0, 0x01, 0x03,
 	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_colormode_1[] = {
+static const uint8_t lcd_cmd_colormode_1[] = {
 	0xB0, 0x01, 0x04,
 	0xC9, 0x01, 0x01,
 	0xB0, 0x01, 0x03,
 	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_unk_0[] = {
+static const uint8_t lcd_cmd_unk_0[] = {
 	0xB0, 0x01, 0x00,
 	0xB8, 0x05, 0x00, 0x1A, 0x18, 0x02, 0x40,
 	0xB0, 0x01, 0x03,
 	0xFF, 0x00, 0x00
 };
 
-static const unsigned char lcd_cmd_unk_1[] = {
+static const uint8_t lcd_cmd_unk_1[] = {
 	0xB0, 0x01, 0x00,
 	0xB8, 0x05, 0x01, 0x1A, 0x18, 0x02, 0x40,
 	0xB0, 0x01, 0x03,
 	0xFF, 0x00, 0x00
 };
 
-static const unsigned char brightness_lut[] = {
+static const uint8_t brightness_lut[] = {
 	0x1F, 0x25, 0x2B, 0x32,
 	0x3A, 0x43, 0x4D, 0x58,
 	0x64, 0x72, 0x81, 0x93,
@@ -149,10 +149,10 @@ static const unsigned char brightness_lut[] = {
 
 static void lcd_spi_write_cmd(const struct lcd_spi_cmd *cmd)
 {
-	unsigned int i;
-	volatile unsigned int *spi_regs = SPI_REGS(2);
-	unsigned int tmpbuff = 0;
-	unsigned int tmpbuff_size = 0;
+	uint32_t i;
+	volatile uint32_t *spi_regs = SPI_REGS(2);
+	uint32_t tmpbuff = 0;
+	uint32_t tmpbuff_size = 0;
 
 	pervasive_clock_enable_spi(2);
 
@@ -176,7 +176,7 @@ static void lcd_spi_write_cmd(const struct lcd_spi_cmd *cmd)
 	}
 
 	for (i = 0; i < cmd->size; i++) {
-		unsigned char data = rbit(cmd->data[i]) >> 24;
+		uint8_t data = rbit(cmd->data[i]) >> 24;
 
 		tmpbuff |= ((data << 1) | 1) << tmpbuff_size;
 		tmpbuff_size += 9;
@@ -221,12 +221,12 @@ static void lcd_spi_write_cmd(const struct lcd_spi_cmd *cmd)
 	pervasive_clock_disable_spi(2);
 }
 
-static void lcd_spi_read(unsigned char *buffer, unsigned int size, int header_bits)
+static void lcd_spi_read(uint8_t *buffer, uint32_t size, int header_bits)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(2);
-	unsigned int readcnt = 0;
-	unsigned int tmp_bits = 0;
-	unsigned int tmp = 0;
+	volatile uint32_t *spi_regs = SPI_REGS(2);
+	uint32_t readcnt = 0;
+	uint32_t tmp_bits = 0;
+	uint32_t tmp = 0;
 
 	pervasive_clock_enable_spi(2);
 
@@ -289,9 +289,9 @@ static void lcd_i2c_bl_write_cmdlist(const struct lcd_i2c_bl_cmd *cmdlist)
 		lcd_i2c_bl_write_cmd(cmdlist++);
 }
 
-static void lcd_bl_set_brightness(unsigned int brightness)
+static void lcd_bl_set_brightness(uint32_t brightness)
 {
-	unsigned int pwm;
+	uint32_t pwm;
 	struct lcd_i2c_bl_cmd cmd;
 
 	if (brightness == 0) {
@@ -323,8 +323,8 @@ static void lcd_bl_set_brightness(unsigned int brightness)
 static void lcd_bl_reset(void)
 {
 	struct lcd_i2c_bl_cmd *cmdlist;
-	unsigned int hw_info = sysroot_get_hw_info() & 0xffff00;
-	unsigned int hw_rev = hw_info - 0x804000;
+	uint32_t hw_info = sysroot_get_hw_info() & 0xffff00;
+	uint32_t hw_rev = hw_info - 0x804000;
 
 	if (sysroot_is_au_codec_ic_conexant()) {
 		cmdlist = (struct lcd_i2c_bl_cmd *)lcd_bl_reset_cmd_3;
@@ -348,7 +348,7 @@ static void lcd_bl_reset(void)
 	lcd_i2c_bl_write_cmdlist(cmdlist);
 }
 
-static void lcd_display_on(unsigned short supplier_elective_data)
+static void lcd_display_on(uint16_t supplier_elective_data)
 {
 	static const int colormode = 0;
 	static const int unk = 0;
@@ -378,8 +378,8 @@ static void lcd_display_on(unsigned short supplier_elective_data)
 	lcd_spi_write_cmdlist(cmdlist_unk);
 }
 
-static void lcd_read_ddb(unsigned short *supplier_id,
-			 unsigned short *supplier_elective_data)
+static void lcd_read_ddb(uint16_t *supplier_id,
+			 uint16_t *supplier_elective_data)
 {
 	static const struct lcd_spi_cmd read_ddb_cmd = {
 		.cmd = 0xA1,
@@ -387,7 +387,7 @@ static void lcd_read_ddb(unsigned short *supplier_id,
 		.data = {0, 0, 0, 0, 0, 0}
 	};
 
-	unsigned char ddb[12];
+	uint8_t ddb[12];
 
 	lcd_spi_write_cmd(&read_ddb_cmd);
 	lcd_spi_read(ddb, 6, 9);
@@ -400,7 +400,7 @@ static void lcd_read_ddb(unsigned short *supplier_id,
 
 int lcd_init(void)
 {
-	unsigned short supplier_elective_data;
+	uint16_t supplier_elective_data;
 
 	spi_init(2);
 	pervasive_clock_disable_spi(2);

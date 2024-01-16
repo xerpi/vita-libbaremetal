@@ -6,7 +6,7 @@
 
 #define I2C_REGS(i)			((void *)((i) == 0 ? I2C0_BASE_ADDR : I2C1_BASE_ADDR))
 
-static inline void i2c_wait_busy(volatile unsigned int *i2c_regs)
+static inline void i2c_wait_busy(volatile uint32_t *i2c_regs)
 {
 	while (i2c_regs[7])
 		;
@@ -14,7 +14,7 @@ static inline void i2c_wait_busy(volatile unsigned int *i2c_regs)
 
 void i2c_init_bus(int bus)
 {
-	volatile unsigned int *i2c_regs = I2C_REGS(bus);
+	volatile uint32_t *i2c_regs = I2C_REGS(bus);
 
 	i2c_regs[0xB] = 0x100F70F;
 	i2c_regs[2] = 1;
@@ -30,10 +30,10 @@ void i2c_init_bus(int bus)
 	i2c_regs[6] = 4; // or 5?
 }
 
-void i2c_transfer_write(int bus, unsigned char addr, const unsigned char *buffer, int size)
+void i2c_transfer_write(int bus, uint8_t addr, const uint8_t *buffer, int size)
 {
 	int i;
-	volatile unsigned int *i2c_regs = I2C_REGS(bus);
+	volatile uint32_t *i2c_regs = I2C_REGS(bus);
 
 	i2c_regs[2] = 1;
 	i2c_regs[3] = 1;
@@ -51,10 +51,10 @@ void i2c_transfer_write(int bus, unsigned char addr, const unsigned char *buffer
 	i2c_wait_busy(i2c_regs);
 }
 
-void i2c_transfer_read(int bus, unsigned char addr, unsigned char *buffer, int size)
+void i2c_transfer_read(int bus, uint8_t addr, uint8_t *buffer, int size)
 {
 	int i;
-	volatile unsigned int *i2c_regs = I2C_REGS(bus);
+	volatile uint32_t *i2c_regs = I2C_REGS(bus);
 
 	i2c_regs[2] = 1;
 	i2c_regs[3] = 1;
@@ -71,11 +71,11 @@ void i2c_transfer_read(int bus, unsigned char addr, unsigned char *buffer, int s
 	i2c_wait_busy(i2c_regs);
 }
 
-void i2c_transfer_write_read(int bus, unsigned char write_addr, const unsigned char *write_buffer, int write_size,
-			              unsigned char read_addr, unsigned char *read_buffer, int read_size)
+void i2c_transfer_write_read(int bus, uint8_t write_addr, const uint8_t *write_buffer, int write_size,
+			     uint8_t read_addr, uint8_t *read_buffer, int read_size)
 {
 	int i;
-	volatile unsigned int *i2c_regs = I2C_REGS(bus);
+	volatile uint32_t *i2c_regs = I2C_REGS(bus);
 
 	i2c_regs[2] = 1;
 	i2c_regs[3] = 1;

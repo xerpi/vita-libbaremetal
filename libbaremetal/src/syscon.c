@@ -197,14 +197,14 @@ void syscon_msif_set_power(int enable)
 	syscon_short_command_write(0x89B, enable, 1);
 }
 
-void syscon_ctrl_device_reset(unsigned int param_1, unsigned int param_2)
+void syscon_ctrl_device_reset(uint32_t param_1, uint32_t param_2)
 {
 	syscon_short_command_write(0x88F, param_2 | (param_1 << 8), 2);
 }
 
 void syscon_get_touchpanel_device_info(struct syscon_touchpanel_device_info *info)
 {
-	unsigned char buffer[SYSCON_RX_HEADER_SIZE + sizeof(*info)];
+	uint8_t buffer[SYSCON_RX_HEADER_SIZE + sizeof(*info)];
 	uint8_t *data = &buffer[SYSCON_RX_DATA];
 
 	syscon_command_read(0x380, buffer, sizeof(buffer));

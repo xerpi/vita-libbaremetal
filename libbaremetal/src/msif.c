@@ -65,54 +65,54 @@
 #define MS_SYS_SERIAL		0x80
 
 struct ms_status_registers {
-	unsigned char reserved0;
-	unsigned char interrupt;
-	unsigned char status;
-	unsigned char reserved1;
-	unsigned char type;
-	unsigned char reserved2;
-	unsigned char category;
-	unsigned char class;
+	uint8_t reserved0;
+	uint8_t interrupt;
+	uint8_t status;
+	uint8_t reserved1;
+	uint8_t type;
+	uint8_t reserved2;
+	uint8_t category;
+	uint8_t class;
 } __attribute__((packed));
 
 struct msif_auth_dmac5_41_req1 {
-	unsigned char f00d_1C_key[0x10];
-	unsigned char card_info[0x8];
-	unsigned char challenge[0x8];
-	unsigned char session_id[8];
+	uint8_t f00d_1C_key[0x10];
+	uint8_t card_info[0x8];
+	uint8_t challenge[0x8];
+	uint8_t session_id[8];
 } __attribute__((packed));
 
 struct msif_auth_dmac5_41_req2 {
-	unsigned char session_id[0x8];
-	unsigned char challenge[0x8];
+	uint8_t session_id[0x8];
+	uint8_t challenge[0x8];
 } __attribute__((packed));
 
 struct msif_auth_tpc_cmd48_req {
-	unsigned char session_id[0x8];
-	unsigned char f00d_cmd1_data;
-	unsigned char reserved[0x17];
+	uint8_t session_id[0x8];
+	uint8_t f00d_cmd1_data;
+	uint8_t reserved[0x17];
 } __attribute__((packed));
 
 struct msif_auth_tpc_cmd49_resp {
-	unsigned char f00d_1C_key[0x10];
-	unsigned char card_info[0x8];
-	unsigned char challenge[0x8];
-	unsigned char iv[0x08];
-	unsigned char reserved[0x18];
+	uint8_t f00d_1C_key[0x10];
+	uint8_t card_info[0x8];
+	uint8_t challenge[0x8];
+	uint8_t iv[0x08];
+	uint8_t reserved[0x18];
 } __attribute__((packed));
 
 struct msif_auth_tpc_cmd4A_req {
-	unsigned char iv[0x8];
-	unsigned char reserved[0x18];
+	uint8_t iv[0x8];
+	uint8_t reserved[0x18];
 } __attribute__((packed));
 
-static void auth_get_random_data(unsigned char *buf, int size)
+static void auth_get_random_data(uint8_t *buf, int size)
 {
 	memset(buf, 0, size);
 }
 
 static void aes_cbc_enc(void *dst, const void *src, const void *key, void *iv,
-		        unsigned int key_size, unsigned int size)
+		        uint32_t key_size, uint32_t size)
 {
 	mbedtls_aes_context aes;
 
@@ -122,9 +122,9 @@ static void aes_cbc_enc(void *dst, const void *src, const void *key, void *iv,
 	mbedtls_aes_free(&aes);
 }
 
-static void des3_cbc_cts_enc_iv_0(void *dst, const void *src, const void *key, unsigned int size)
+static void des3_cbc_cts_enc_iv_0(void *dst, const void *src, const void *key, uint32_t size)
 {
-	unsigned char iv[8];
+	uint8_t iv[8];
 	mbedtls_des3_context des3;
 
 	memset(iv, 0, sizeof(iv));
@@ -134,17 +134,17 @@ static void des3_cbc_cts_enc_iv_0(void *dst, const void *src, const void *key, u
 	mbedtls_des3_free(&des3);
 }
 
-static inline void ms_tpc(unsigned int tpc, unsigned int size)
+static inline void ms_tpc(uint32_t tpc, uint32_t size)
 {
-	writew(tpc | (size & 0x7FF), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
+	write16(tpc | (size & 0x7FF), MSIF_BASE_ADDR + MSIF_COMMAND_REG);
 }
 
 static int ms_wait_ready(void)
 {
-	unsigned int tmp;
+	uint32_t tmp;
 
 	do {
-		tmp = readw(MSIF_BASE_ADDR + MSIF_STATUS_REG);
+		tmp = read16(MSIF_BASE_ADDR + MSIF_STATUS_REG);
 	} while (!(tmp & (MSIF_STATUS_READY | MSIF_STATUS_TIMEOUT | MSIF_STATUS_CRC_ERROR)));
 
 	if (tmp & (MSIF_STATUS_TIMEOUT | MSIF_STATUS_CRC_ERROR))
@@ -155,41 +155,41 @@ static int ms_wait_ready(void)
 
 static void ms_wait_fifo_rw(void)
 {
-	unsigned int tmp;
+	uint32_t tmp;
 
 	do {
-		tmp = readw(MSIF_BASE_ADDR + MSIF_STATUS_REG);
+		tmp = read16(MSIF_BASE_ADDR + MSIF_STATUS_REG);
 	} while (!(tmp & MSIF_STATUS_FIFO_RW));
 }
 
 static void ms_wait_unk1(void)
 {
-	unsigned int tmp;
+	uint32_t tmp;
 
 	do {
-		tmp = readw(MSIF_BASE_ADDR + MSIF_STATUS_REG);
+		tmp = read16(MSIF_BASE_ADDR + MSIF_STATUS_REG);
 	} while (!(tmp & MSIF_STATUS_UNK1));
 }
 
 static void ms_wait_not_reset(void)
 {
-	unsigned int tmp;
+	uint32_t tmp;
 
 	do {
-		tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+		tmp = read16(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 	} while (tmp & MSIF_SYSTEM_RESET);
 }
 
-static void ms_fifo_read(void *buff, unsigned int size)
+static void ms_fifo_read(void *buff, uint32_t size)
 {
-	unsigned int data[2];
-	unsigned int *ptr = buff;
+	uint32_t data[2];
+	uint32_t *ptr = buff;
 
 	while (size > 8) {
 		ms_wait_fifo_rw();
 
-		ptr[0] = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
-		ptr[1] = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
+		ptr[0] = read32(MSIF_BASE_ADDR + MSIF_DATA_REG);
+		ptr[1] = read32(MSIF_BASE_ADDR + MSIF_DATA_REG);
 
 		ptr += 2;
 		size -= 8;
@@ -198,23 +198,23 @@ static void ms_fifo_read(void *buff, unsigned int size)
 	if (size > 0) {
 		ms_wait_fifo_rw();
 
-		data[0] = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
-		data[1] = readl(MSIF_BASE_ADDR + MSIF_DATA_REG);
+		data[0] = read32(MSIF_BASE_ADDR + MSIF_DATA_REG);
+		data[1] = read32(MSIF_BASE_ADDR + MSIF_DATA_REG);
 
 		memcpy(ptr, data, size);
 	}
 }
 
-static void ms_fifo_write(const void *buff, unsigned int size)
+static void ms_fifo_write(const void *buff, uint32_t size)
 {
-	unsigned int data[2];
-	const unsigned int *ptr = buff;
+	uint32_t data[2];
+	const uint32_t *ptr = buff;
 
 	while (size > 8) {
 		ms_wait_fifo_rw();
 
-		writel(ptr[0], MSIF_BASE_ADDR + MSIF_DATA_REG);
-		writel(ptr[1], MSIF_BASE_ADDR + MSIF_DATA_REG);
+		write32(ptr[0], MSIF_BASE_ADDR + MSIF_DATA_REG);
+		write32(ptr[1], MSIF_BASE_ADDR + MSIF_DATA_REG);
 
 		ptr += 2;
 		size -= 8;
@@ -226,15 +226,15 @@ static void ms_fifo_write(const void *buff, unsigned int size)
 		memcpy(data, ptr, size);
 		memset((char *)data + size, 0, sizeof(data) - size);
 
-		writel(data[0], MSIF_BASE_ADDR + MSIF_DATA_REG);
-		writel(data[1], MSIF_BASE_ADDR + MSIF_DATA_REG);
+		write32(data[0], MSIF_BASE_ADDR + MSIF_DATA_REG);
+		write32(data[1], MSIF_BASE_ADDR + MSIF_DATA_REG);
 	}
 }
 
-static int ms_set_rw_reg_adrs(unsigned char read_addr, unsigned int read_size,
-			       unsigned char write_addr, unsigned int write_size)
+static int ms_set_rw_reg_adrs(uint8_t read_addr, uint32_t read_size,
+			       uint8_t write_addr, uint32_t write_size)
 {
-	unsigned char buff[4];
+	uint8_t buff[4];
 
 	buff[0] = read_addr;
 	buff[1] = read_size;
@@ -247,7 +247,7 @@ static int ms_set_rw_reg_adrs(unsigned char read_addr, unsigned int read_size,
 	return ms_wait_ready();
 }
 
-static int ms_read_reg(unsigned char addr, void *buff, unsigned int size)
+static int ms_read_reg(uint8_t addr, void *buff, uint32_t size)
 {
 	ms_set_rw_reg_adrs(addr, size, 0, 0);
 	ms_tpc(MS_TPC_READ_REG, size);
@@ -255,7 +255,7 @@ static int ms_read_reg(unsigned char addr, void *buff, unsigned int size)
 	return ms_wait_ready();
 }
 
-static int ms_write_reg(unsigned char addr, const void *buff, unsigned int size)
+static int ms_write_reg(uint8_t addr, const void *buff, uint32_t size)
 {
 	ms_set_rw_reg_adrs(0, 0, addr, size);
 	ms_tpc(MS_TPC_WRITE_REG, size);
@@ -263,7 +263,7 @@ static int ms_write_reg(unsigned char addr, const void *buff, unsigned int size)
 	return ms_wait_ready();
 }
 
-static int ms_get_reg_int(unsigned char *reg_int)
+static int ms_get_reg_int(uint8_t *reg_int)
 {
 	ms_tpc(MS_TPC_GET_INT, sizeof(*reg_int));
 	ms_fifo_read(reg_int, sizeof(*reg_int));
@@ -273,7 +273,7 @@ static int ms_get_reg_int(unsigned char *reg_int)
 static void ms_reg_int_wait_ced(void)
 {
 	int ret;
-	unsigned char reg_int;
+	uint8_t reg_int;
 
 	do {
 		ret = ms_get_reg_int(&reg_int);
@@ -283,16 +283,16 @@ static void ms_reg_int_wait_ced(void)
 static void ms_reg_int_wait_breq(void)
 {
 	int ret;
-	unsigned char reg_int;
+	uint8_t reg_int;
 
 	do {
 		ret = ms_get_reg_int(&reg_int);
 	} while ((ret < 0) || !(reg_int & MS_INT_REG_BREQ));
 }
 
-static int ms_set_short_data_size(unsigned int size)
+static int ms_set_short_data_size(uint32_t size)
 {
-	unsigned char tpc_param;
+	uint8_t tpc_param;
 
 	if (size == 32)
 		tpc_param = 0;
@@ -310,9 +310,9 @@ static int ms_set_short_data_size(unsigned int size)
 	return 0;
 }
 
-static void msif_set_clock_for_bus_mode(unsigned int bus_mode)
+static void msif_set_clock_for_bus_mode(uint32_t bus_mode)
 {
-	unsigned int clock;
+	uint32_t clock;
 
 	if (bus_mode == 1)
 		clock = 4;
@@ -324,11 +324,11 @@ static void msif_set_clock_for_bus_mode(unsigned int bus_mode)
 	pervasive_msif_set_clock(clock);
 }
 
-static void msif_set_bus_mode(unsigned int bus_mode)
+static void msif_set_bus_mode(uint32_t bus_mode)
 {
-	unsigned short val;
+	uint16_t val;
 
-	val = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	val = read16(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 
 	if (bus_mode == 1)
 		val = (val & 0xFFBF) | 0x80;
@@ -337,14 +337,14 @@ static void msif_set_bus_mode(unsigned int bus_mode)
 	else
 		val = val & 0xFF3F;
 
-	writew(val, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	write16(val, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 
 	msif_set_clock_for_bus_mode(bus_mode);
 }
 
-static void ms_set_bus_mode(unsigned int bus_mode)
+static void ms_set_bus_mode(uint32_t bus_mode)
 {
-	unsigned char sys_param;
+	uint8_t sys_param;
 
 	switch (bus_mode) {
 	case 0:
@@ -366,13 +366,13 @@ static void ms_set_bus_mode(unsigned int bus_mode)
 	msif_set_bus_mode(bus_mode);
 }
 
-static void msif_reg_0x100_mask_sub_C2868C(unsigned int val, unsigned int mask)
+static void msif_reg_0x100_mask_sub_C2868C(uint32_t val, uint32_t mask)
 {
-	unsigned int reg;
+	uint32_t reg;
 
-	reg = readl(MSIF_BASE_ADDR + 0x30 + 0x70);
+	reg = read32(MSIF_BASE_ADDR + 0x30 + 0x70);
 	reg = (reg & mask) | (val & ~mask);
-	writel(reg, MSIF_BASE_ADDR + 0x30 + 0x70);
+	write32(reg, MSIF_BASE_ADDR + 0x30 + 0x70);
 }
 
 void msif_init(void)
@@ -385,52 +385,52 @@ void msif_init(void)
 
 static void msif_reset_sub_C286C4(void)
 {
-	unsigned int val;
-	unsigned short tmp;
+	uint32_t val;
+	uint16_t tmp;
 
 	msif_set_clock_for_bus_mode(1);
 
 	/* sub_C28A74 */
-	val = readl(MSIF_BASE_ADDR + 0x30 + 0x70);
+	val = read32(MSIF_BASE_ADDR + 0x30 + 0x70);
 
-	tmp = readw(MSIF_BASE_ADDR + 0x30 - 0x2C);
+	tmp = read16(MSIF_BASE_ADDR + 0x30 - 0x2C);
 	tmp |= 1;
-	writew(tmp, MSIF_BASE_ADDR + 0x30 - 0x2C);
+	write16(tmp, MSIF_BASE_ADDR + 0x30 - 0x2C);
 
 	while (1) {
-		tmp = readw(MSIF_BASE_ADDR + 0x30 - 0x2C);
+		tmp = read16(MSIF_BASE_ADDR + 0x30 - 0x2C);
 		if (!(tmp & 1)) {
-			writel(val, MSIF_BASE_ADDR + 0x30 + 0x70);
+			write32(val, MSIF_BASE_ADDR + 0x30 + 0x70);
 
-			tmp = readw(MSIF_BASE_ADDR + 0x30 - 0x2C);
+			tmp = read16(MSIF_BASE_ADDR + 0x30 - 0x2C);
 			tmp |= 4;
-			writew(tmp, MSIF_BASE_ADDR + 0x30 - 0x2C);
+			write16(tmp, MSIF_BASE_ADDR + 0x30 - 0x2C);
 			break;
 		}
 	}
 
 	/* sub_C2AD1C */
-	tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	tmp = read16(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 	tmp |= MSIF_SYSTEM_RESET;
-	writew(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	write16(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 
 	ms_wait_not_reset();
 
-	tmp = readw(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	tmp = read16(MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 	/*
 	 * Enabling this doesn't work. Default value = 0x20A5.
 	tmp &= 0xFFF8;
 	tmp |= 0x4005;
 	*/
-	writew(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
+	write16(tmp, MSIF_BASE_ADDR + MSIF_SYSTEM_REG);
 
 	ms_reg_int_wait_ced();
 }
 
-static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
-			unsigned int *write_protected)
+static void ms_get_info(uint32_t *model_name_type, uint32_t *unkC20,
+			uint32_t *write_protected)
 {
-	unsigned int type = 0;
+	uint32_t type = 0;
 	struct ms_status_registers status;
 
 	ms_read_reg(0, &status, sizeof(status));
@@ -447,7 +447,7 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 			else
 				type = 0x40;
 		} else if ((status.type == status.class) || (status.class - 1 <= 2)) {
-			unsigned int v15;
+			uint32_t v15;
 
 			if (status.type == 0) {
 				v15 = 0x2010;
@@ -466,8 +466,8 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 				if (status.reserved2 == 0) {
 					type = (1 << status.class) | 0x2020;
 				} else if (status.reserved2 == 7) {
-					unsigned int v16 = 0xA820;
-					if (!(readw(MSIF_BASE_ADDR + MSIF_STATUS_REG) & 0x400))
+					uint32_t v16 = 0xA820;
+					if (!(read16(MSIF_BASE_ADDR + MSIF_STATUS_REG) & 0x400))
 						v16 = 0xE820;
 					type = (1 << status.class) | v16;
 				}
@@ -482,7 +482,7 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 
 			if (status.reserved2 == 7) {
 				type = 0xA880;
-				if (!(readw(MSIF_BASE_ADDR + MSIF_STATUS_REG) & 0x400))
+				if (!(read16(MSIF_BASE_ADDR + MSIF_STATUS_REG) & 0x400))
 					type = 0xE880;
 			}
 		}
@@ -493,9 +493,9 @@ static void ms_get_info(unsigned int *model_name_type, unsigned int *unkC20,
 	*model_name_type = type;
 }
 
-static void msif_auth_derive_iv_tweak(const unsigned char *tweak_seed,
-				      unsigned char *tweak_key0,
-				      unsigned char *tweak_key1)
+static void msif_auth_derive_iv_tweak(const uint8_t *tweak_seed,
+				      uint8_t *tweak_key0,
+				      uint8_t *tweak_key1)
 {
 	uint64_t tmp;
 
@@ -508,24 +508,24 @@ static void msif_auth_derive_iv_tweak(const unsigned char *tweak_seed,
 	tweak_key1[7] = ((tweak_key0[0] & 0x80) > 0) ? (tweak_key1[7] ^ 0x1B) : tweak_key1[7];
 }
 
-static void msif_auth_derive_iv(void *result, const void *data, const void *key, unsigned int size)
+static void msif_auth_derive_iv(void *result, const void *data, const void *key, uint32_t size)
 {
-	unsigned char tweak_seed_enc[8];
-	unsigned char tweak_seed[8];
+	uint8_t tweak_seed_enc[8];
+	uint8_t tweak_seed[8];
 	memset(tweak_seed, 0, sizeof(tweak_seed));
 	des3_cbc_cts_enc_iv_0(tweak_seed_enc, tweak_seed, key, 8);
 
-	unsigned int tweak_key0[2];
-	unsigned int tweak_key1[2];
-	msif_auth_derive_iv_tweak(tweak_seed_enc, (unsigned char *)tweak_key0,
-				  (unsigned char *)tweak_key1);
+	uint32_t tweak_key0[2];
+	uint32_t tweak_key1[2];
+	msif_auth_derive_iv_tweak(tweak_seed_enc, (uint8_t *)tweak_key0,
+				  (uint8_t *)tweak_key1);
 	if (size <= 8)
 		return;
 
-	const unsigned int *current_ptr = data;
-	unsigned int current_size = size;
+	const uint32_t *current_ptr = data;
+	uint32_t current_size = size;
 
-	unsigned int IV[2];
+	uint32_t IV[2];
 	memset(IV, 0, sizeof(IV));
 
 	while (current_size > 8) {
@@ -539,8 +539,8 @@ static void msif_auth_derive_iv(void *result, const void *data, const void *key,
 		current_size = current_size - 8;
 	}
 
-	unsigned int IV_mod[2];
-	unsigned int tail_data[2];
+	uint32_t IV_mod[2];
+	uint32_t tail_data[2];
 
 	if (current_size == 8) {
 		tail_data[0] = current_ptr[0];
@@ -555,24 +555,24 @@ static void msif_auth_derive_iv(void *result, const void *data, const void *key,
 		IV_mod[1] = IV[1] ^ tweak_key1[1];
 	}
 
-	unsigned int final_round[2];
+	uint32_t final_round[2];
 	final_round[0] = tail_data[0] ^ IV_mod[0];
 	final_round[1] = tail_data[1] ^ IV_mod[1];
 
 	des3_cbc_cts_enc_iv_0(result, final_round, key, 8);
 }
 
-static void rmauth_cmd_0x1(unsigned int *res)
+static void rmauth_cmd_0x1(uint32_t *res)
 {
 	*res = 0;
 }
 
-static void rmauth_cmd_0x2(const unsigned char key[32],
-			   const unsigned char seed[32],
-			   unsigned char out_key[32])
+static void rmauth_cmd_0x2(const uint8_t key[32],
+			   const uint8_t seed[32],
+			   uint8_t out_key[32])
 {
-	unsigned char iv[MBEDTLS_AES_BLOCK_SIZE];
-	unsigned char seed_trunc[16];
+	uint8_t iv[MBEDTLS_AES_BLOCK_SIZE];
+	uint8_t seed_trunc[16];
 
 	memcpy(seed_trunc, seed, 16);
 
@@ -583,14 +583,14 @@ static void rmauth_cmd_0x2(const unsigned char key[32],
 	aes_cbc_enc(&out_key[16], seed_trunc, &key[16], iv, 128, 16);
 }
 
-static void msif_auth(const unsigned char key[32], unsigned int auth_val)
+static void msif_auth(const uint8_t key[32], uint32_t auth_val)
 {
-	unsigned char key_1C[32];
+	uint8_t key_1C[32];
 
-	unsigned int f00d_cmd1_res;
+	uint32_t f00d_cmd1_res;
 	rmauth_cmd_0x1(&f00d_cmd1_res);
 
-	unsigned char session_id[8];
+	uint8_t session_id[8];
 	auth_get_random_data(session_id, sizeof(session_id));
 
 	/* Execute TPC cmd 0x48 - send request - establish session with memory card */
@@ -640,11 +640,11 @@ static void msif_auth(const unsigned char key[32], unsigned int auth_val)
 	msif_write_short_data(MS_TPC_MSIF_AUTH_4A, &cmd4A_req, 0x20);
 }
 
-void msif_setup(const unsigned char key[32])
+void msif_setup(const uint8_t key[32])
 {
-	unsigned int misc_0x0000;
-	unsigned int hw_info_masked;
-	unsigned int model_name_type, unkC20, write_protected;
+	uint32_t misc_0x0000;
+	uint32_t hw_info_masked;
+	uint32_t model_name_type, unkC20, write_protected;
 
 	msif_reset_sub_C286C4();
 	ms_get_info(&model_name_type, &unkC20, &write_protected);
@@ -654,7 +654,7 @@ void msif_setup(const unsigned char key[32])
 
 	if (misc_0x0000) {
 		if (misc_0x0000 == 0x100) {
-			unsigned int val;
+			uint32_t val;
 			if (hw_info_masked < 0x800000)
 				val = 0x35000C;
 			else
@@ -683,10 +683,10 @@ void msif_get_info(struct msif_info *info)
 	/* TODO */
 }
 
-void msif_read_sector(unsigned int sector, void *buff)
+void msif_read_sector(uint32_t sector, void *buff)
 {
-	const unsigned int count = 1;
-	unsigned char data[7];
+	const uint32_t count = 1;
+	uint8_t data[7];
 
 	data[0] = MSPRO_CMD_READ_DATA;
 	data[1] = (count >> 8) & 0xFF;
@@ -711,10 +711,10 @@ void msif_read_sector(unsigned int sector, void *buff)
 	ms_reg_int_wait_ced();
 }
 
-void msif_read_atrb(unsigned int address, void *buff)
+void msif_read_atrb(uint32_t address, void *buff)
 {
-	const unsigned int count = 1;
-	unsigned char data[7];
+	const uint32_t count = 1;
+	uint8_t data[7];
 
 	data[0] = MSPRO_CMD_READ_ATRB;
 	data[1] = (count >> 8) & 0xFF;
@@ -739,7 +739,7 @@ void msif_read_atrb(unsigned int address, void *buff)
 	ms_reg_int_wait_ced();
 }
 
-void msif_read_short_data(unsigned char cmd, void *buff, unsigned int size)
+void msif_read_short_data(uint8_t cmd, void *buff, uint32_t size)
 {
 	if (ms_set_short_data_size(size))
 		return;
@@ -759,7 +759,7 @@ void msif_read_short_data(unsigned char cmd, void *buff, unsigned int size)
 	ms_reg_int_wait_ced();
 }
 
-void msif_write_short_data(unsigned char cmd, const void *buff, unsigned int size)
+void msif_write_short_data(uint8_t cmd, const void *buff, uint32_t size)
 {
 	if (ms_set_short_data_size(size))
 		return;

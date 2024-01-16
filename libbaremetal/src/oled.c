@@ -12,12 +12,12 @@
 #define END 0xFF
 
 struct oled_cmd {
-	unsigned char cmd;
-	unsigned char size;
-	unsigned char data[];
+	uint8_t cmd;
+	uint8_t size;
+	uint8_t data[];
 };
 
-static const unsigned char oled_init_cmdlist1[] = {
+static const uint8_t oled_init_cmdlist1[] = {
 	0xF0, 2, 0x5A, 0x5A,
 	0xF1, 2, 0x5A, 0x5A,
 	0xB0, 1, 2,
@@ -30,14 +30,14 @@ static const unsigned char oled_init_cmdlist1[] = {
 	END, END
 };
 
-static const unsigned char oled_init_cmdlist2[] = {
+static const uint8_t oled_init_cmdlist2[] = {
 	0xB2, 4, 0xB, 0xB, 0xB, 0xB,
 	0xB1, 3, 7, 0, 0x16,
 	0xF8, 0x13, 0x7F, 0x7A, 0x89, 0x67, 0x26, 0x38, 0, 0, 9, 0x67, 0x70, 0x88, 0x7A, 0x76, 5, 9, 0x23, 0x23, 0x23,
 	END, END
 };
 
-static const unsigned char oled_init_cmdlist3[] = {
+static const uint8_t oled_init_cmdlist3[] = {
 	0xF5, 5, 0, 6, 0x27, 0x35, 3,
 	0xB2, 4, 6, 6, 6, 6,
 	0xB1, 3, 7, 0, 0x10,
@@ -45,7 +45,7 @@ static const unsigned char oled_init_cmdlist3[] = {
 	END, END
 };
 
-static const unsigned char oled_disp_on_cmdlist[] = {
+static const uint8_t oled_disp_on_cmdlist[] = {
 	DELAY, 4,
 	0x11, 0,
 	DELAY, 0x0D,
@@ -54,7 +54,7 @@ static const unsigned char oled_disp_on_cmdlist[] = {
 	END, END
 };
 
-static const unsigned char oled_disp_off_cmdlist[] = {
+static const uint8_t oled_disp_off_cmdlist[] = {
 	0x28, 0,
 	DELAY, 1,
 	0x10, 0,
@@ -62,17 +62,17 @@ static const unsigned char oled_disp_off_cmdlist[] = {
 	END, END
 };
 
-static const unsigned char oled_color_space_mode_0_cmdlist[] = {
+static const uint8_t oled_color_space_mode_0_cmdlist[] = {
 	0xB3, 1, 0,
 	END, END
 };
 
-static const unsigned char oled_color_space_mode_1_cmdlist[] = {
+static const uint8_t oled_color_space_mode_1_cmdlist[] = {
 	0xB3, 1, 1,
 	END, END
 };
 
-static const unsigned char oled_brightness_cmdlist[] = {
+static const uint8_t oled_brightness_cmdlist[] = {
 	0xF9, 0x16, 1, 0x79, 0x78, 0x8D, 0xD9, 0xDF, 0xD5, 0xCB, 0xCF, 0xC5, 0xE5, 0xE0, 0xE4, 0xDC, 0xB8, 0xD4, 0xFA, 0xED, 0xE6, 0x2F, 0, 0x2F,
 	0xF9, 1, 0,
 	0x26, 1, 0,
@@ -82,10 +82,10 @@ static const unsigned char oled_brightness_cmdlist[] = {
 
 static void oled_write_cmd(const struct oled_cmd *cmd)
 {
-	unsigned int i;
-	volatile unsigned int *spi_regs = SPI_REGS(2);
-	unsigned int tmpbuff = 0;
-	unsigned int tmpbuff_size = 0;
+	uint32_t i;
+	volatile uint32_t *spi_regs = SPI_REGS(2);
+	uint32_t tmpbuff = 0;
+	uint32_t tmpbuff_size = 0;
 
 	pervasive_clock_enable_spi(2);
 
@@ -109,7 +109,7 @@ static void oled_write_cmd(const struct oled_cmd *cmd)
 	}
 
 	for (i = 0; i < cmd->size; i++) {
-		unsigned char data = rbit(cmd->data[i]) >> 24;
+		uint8_t data = rbit(cmd->data[i]) >> 24;
 
 		tmpbuff |= ((data << 1) | 1) << tmpbuff_size;
 		tmpbuff_size += 9;

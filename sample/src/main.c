@@ -15,11 +15,14 @@
 #include <baremetal/utils.h>
 #include "log.h"
 
-static const unsigned char msif_key[32] = {
-	0 /* Bring your own keys */
+static const uint8_t msif_key[32] = {
+	0xD4, 0x19, 0xA2, 0xEB, 0x9D, 0x61, 0xA5, 0x2F,
+	0x4F, 0xA2, 0x8B, 0x27, 0xE3, 0x2F, 0xCD, 0xD7,
+	0xE0, 0x04, 0x8D, 0x44, 0x3D, 0x63, 0xC9, 0x2C,
+	0x0B, 0x27, 0x13, 0x55, 0x41, 0xD9, 0x2E, 0xC4
 };
 
-int main(struct sysroot_buffer *sysroot, unsigned int cpu_id)
+int main(struct sysroot_buffer *sysroot, uint32_t cpu_id)
 {
 	if (cpu_id != 0) {
 		while (1)
@@ -56,7 +59,7 @@ int main(struct sysroot_buffer *sysroot, unsigned int cpu_id)
 		msif_setup(msif_key);
 		LOG("MS auth done!\n");
 
-		unsigned char sector[MS_SECTOR_SIZE];
+		uint8_t sector[MS_SECTOR_SIZE];
 		msif_read_sector(0, sector);
 		LOG_BUFFER("MBR:", sector, MS_SECTOR_SIZE);
 	}

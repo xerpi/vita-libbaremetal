@@ -54,7 +54,7 @@ int syscon_get_hardware_info(void);
 void syscon_reset_device(int type, int mode);
 void syscon_set_hdmi_cdc_hpd(int enable);
 void syscon_msif_set_power(int enable);
-void syscon_ctrl_device_reset(unsigned int param_1, unsigned int param_2);
+void syscon_ctrl_device_reset(uint32_t param_1, uint32_t param_2);
 void syscon_get_touchpanel_device_info(struct syscon_touchpanel_device_info *info);
 void syscon_get_touchpanel_device_info_ext(struct syscon_touchpanel_device_info_ext *info);
 void syscon_get_touchpanel_unk_info_front(uint16_t *data);

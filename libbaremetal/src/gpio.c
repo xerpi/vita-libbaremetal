@@ -26,7 +26,7 @@
 
 void gpio_set_port_mode(int bus, int port, int mode)
 {
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
 
 	gpio_regs[0] = (gpio_regs[0] & ~(1 << port)) | (mode << port);
 
@@ -35,14 +35,14 @@ void gpio_set_port_mode(int bus, int port, int mode)
 
 int gpio_port_read(int bus, int port)
 {
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
 
 	return (gpio_regs[1] >> port) & 1;
 }
 
 void gpio_port_set(int bus, int port)
 {
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
 
 	gpio_regs[2] |= 1 << port;
 
@@ -53,7 +53,7 @@ void gpio_port_set(int bus, int port)
 
 void gpio_port_clear(int bus, int port)
 {
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
 
 	gpio_regs[3] |= 1 << port;
 
@@ -64,9 +64,9 @@ void gpio_port_clear(int bus, int port)
 
 void gpio_set_intr_mode(int bus, int port, int mode)
 {
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
-	unsigned int reg = 5 + port / 16;
-	unsigned int off = 2 * (port % 16);
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
+	uint32_t reg = 5 + port / 16;
+	uint32_t off = 2 * (port % 16);
 
 	gpio_regs[reg] |= (gpio_regs[reg] & ~(3 << off)) | (mode << off);
 
@@ -75,7 +75,7 @@ void gpio_set_intr_mode(int bus, int port, int mode)
 
 int gpio_query_intr(int bus, int port)
 {
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
 
 	return (1 << port) & ((gpio_regs[0x0E] & ~gpio_regs[0x07]) |
 			      (gpio_regs[0x0F] & ~gpio_regs[0x08]) |
@@ -86,9 +86,9 @@ int gpio_query_intr(int bus, int port)
 
 int gpio_acquire_intr(int bus, int port)
 {
-	unsigned int ret;
-	unsigned int mask = 1 << port;
-	volatile unsigned int *gpio_regs = GPIO_REGS(bus);
+	uint32_t ret;
+	uint32_t mask = 1 << port;
+	volatile uint32_t *gpio_regs = GPIO_REGS(bus);
 
 	ret = mask & ((gpio_regs[0x0E] & ~gpio_regs[0x07]) |
 		      (gpio_regs[0x0F] & ~gpio_regs[0x08]) |

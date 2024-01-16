@@ -37,8 +37,8 @@
 #define ADV7533_REG_CEC_DSI_INTERNAL_TIMING	0x27
 
 struct reg_sequence {
-	unsigned char reg;
-	unsigned char cmd;
+	uint8_t reg;
+	uint8_t cmd;
 };
 
 static const struct reg_sequence adv7533_fixed_registers[] = {
@@ -58,19 +58,19 @@ static const struct reg_sequence adv7533_cec_fixed_registers[] = {
 	{ 0x05, 0xc8 },
 };
 
-static void hdmi_write(unsigned char addr, unsigned char reg, unsigned char data)
+static void hdmi_write(uint8_t addr, uint8_t reg, uint8_t data)
 {
-	unsigned char buffer[2] = {
+	uint8_t buffer[2] = {
 		reg, data
 	};
 
 	i2c_transfer_write(HDMI_I2C_BUS, addr, buffer, sizeof(buffer));
 }
 
-static unsigned char hdmi_read(unsigned char addr, unsigned char reg)
+static uint8_t hdmi_read(uint8_t addr, uint8_t reg)
 {
-	unsigned char read_buffer;
-	unsigned char write_buffer = reg;
+	uint8_t read_buffer;
+	uint8_t write_buffer = reg;
 
 	i2c_transfer_write_read(HDMI_I2C_BUS, addr, &write_buffer, sizeof(write_buffer),
 					      addr, &read_buffer, sizeof(read_buffer));
@@ -78,26 +78,26 @@ static unsigned char hdmi_read(unsigned char addr, unsigned char reg)
 	return read_buffer;
 }
 
-static void hdmi_set_bit(unsigned char addr, unsigned char reg, unsigned char bit)
+static void hdmi_set_bit(uint8_t addr, uint8_t reg, uint8_t bit)
 {
-	unsigned char val;
+	uint8_t val;
 	val = hdmi_read(addr, reg);
 	val |= bit;
 	hdmi_write(addr, reg, val);
 }
 
-static void hdmi_clr_bit(unsigned char addr, unsigned char reg, unsigned char bit)
+static void hdmi_clr_bit(uint8_t addr, uint8_t reg, uint8_t bit)
 {
-	unsigned char val;
+	uint8_t val;
 	val = hdmi_read(addr, reg);
 	val &= ~bit;
 	hdmi_write(addr, reg, val);
 }
 
-static void hdmi_update_bits(unsigned char addr, unsigned char reg,
-			  unsigned char mask, unsigned char val)
+static void hdmi_update_bits(uint8_t addr, uint8_t reg,
+			  uint8_t mask, uint8_t val)
 {
-	unsigned char data = hdmi_read(addr, reg);
+	uint8_t data = hdmi_read(addr, reg);
 	data &= ~mask;
 	data |= val & mask;
 	hdmi_write(addr, reg, data);
@@ -126,11 +126,11 @@ int hdmi_get_hpd_state(void)
 
 int hdmi_connect(void)
 {
-	static const unsigned char clock_div_by_lanes[] = { 6, 4, 3 }; /* 2, 3, 4 lanes */
-	static const unsigned int lanes = 3;
+	static const uint8_t clock_div_by_lanes[] = { 6, 4, 3 }; /* 2, 3, 4 lanes */
+	static const uint32_t lanes = 3;
 
 	int i;
-	unsigned char status;
+	uint8_t status;
 
 	hdmi_update_bits(HDMI_I2C_ADDR, ADV7533_REG_POWER,
 			   ADV7533_POWER_POWER_DOWN, 0);
@@ -194,7 +194,7 @@ int hdmi_connect(void)
 	} while (!(status & ADV7533_INT1_BKSV));
 
 	hdmi_write(HDMI_I2C_ADDR, ADV7533_REG_INT(1),
-		   (status & (unsigned char)~0xBF) | ADV7533_INT1_BKSV);
+		   (status & (uint8_t)~0xBF) | ADV7533_INT1_BKSV);
 
 	return 0;
 }

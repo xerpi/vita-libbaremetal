@@ -10,10 +10,10 @@ enum display_type {
 };
 
 struct display_config {
-	unsigned int addr;
-	unsigned int pitch;
-	unsigned int width;
-	unsigned int height;
+	uint32_t addr;
+	uint32_t pitch;
+	uint32_t width;
+	uint32_t height;
 };
 
 void display_init(enum display_type type);

@@ -8,48 +8,43 @@
 
 #define dmb() asm volatile("dmb\n\t" ::: "memory")
 #define dsb() asm volatile("dsb\n\t" ::: "memory")
-#define wfe() asm volatile("wfe\n\t")
+#define wfe() asm volatile("wfe\n\t" ::: "memory")
 
-static inline unsigned int rbit(unsigned int x)
+static inline uint32_t rbit(uint32_t x)
 {
-	unsigned int xrev;
+	uint32_t xrev;
 	asm volatile("rbit %0, %1\n\t" : "=r"(xrev) : "r"(x));
 	return xrev;
 }
 
-static inline unsigned char readb(volatile void *addr)
+static inline uint8_t read8(volatile void *addr)
 {
-	return *(volatile unsigned char *)addr;
+	return *(volatile uint8_t *)addr;
 }
 
-static inline unsigned short readw(volatile void *addr)
+static inline uint16_t read16(volatile void *addr)
 {
-	dsb();
-	return *(volatile unsigned short *)addr;
+	return *(volatile uint16_t *)addr;
 }
 
-static inline unsigned int readl(volatile void *addr)
+static inline uint32_t read32(volatile void *addr)
 {
-	dsb();
-	return *(volatile unsigned int *)addr;
+	return *(volatile uint32_t *)addr;
 }
 
-static inline void writeb(unsigned char val, volatile void *addr)
+static inline void write8(uint8_t val, volatile void *addr)
 {
-	*(volatile unsigned char *)addr = val;
-	dsb();
+	*(volatile uint8_t *)addr = val;
 }
 
-static inline void writew(unsigned short val, volatile void *addr)
+static inline void write16(uint16_t val, volatile void *addr)
 {
-	*(volatile unsigned short *)addr = val;
-	dsb();
+	*(volatile uint16_t *)addr = val;
 }
 
-static inline void writel(unsigned int val, volatile void *addr)
+static inline void write32(uint32_t val, volatile void *addr)
 {
-	*(volatile unsigned int *)addr = val;
-	dsb();
+	*(volatile uint32_t *)addr = val;
 }
 
 static inline uint64_t be_uint64_t_load(const void *addr)
@@ -70,15 +65,15 @@ static inline void be_uint64_t_store(void *addr, uint64_t val)
 #endif
 }
 
-static inline unsigned int smc(unsigned int cmd, unsigned int arg1,
-			       unsigned int arg2, unsigned int arg3,
-			       unsigned int arg4)
+static inline uint32_t smc(uint32_t cmd, uint32_t arg1,
+			   uint32_t arg2, uint32_t arg3,
+			   uint32_t arg4)
 {
-	register unsigned int r0 asm("r0") = arg1;
-	register unsigned int r1 asm("r1") = arg1;
-	register unsigned int r2 asm("r2") = arg1;
-	register unsigned int r3 asm("r3") = arg1;
-	register unsigned int r12 asm("r12") = cmd;
+	register uint32_t r0 asm("r0") = arg1;
+	register uint32_t r1 asm("r1") = arg1;
+	register uint32_t r2 asm("r2") = arg1;
+	register uint32_t r3 asm("r3") = arg1;
+	register uint32_t r12 asm("r12") = cmd;
 
 	asm volatile(
 		"smc #0\n\t"
@@ -89,7 +84,7 @@ static inline unsigned int smc(unsigned int cmd, unsigned int arg1,
 	return r0;
 }
 
-void delay(int n);
-unsigned int get_cpu_id(void);
+void delay(uint32_t n);
+uint32_t get_cpu_id(void);
 
 #endif

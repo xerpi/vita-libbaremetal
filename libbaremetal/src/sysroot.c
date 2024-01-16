@@ -7,17 +7,17 @@ void sysroot_init(const struct sysroot_buffer *sysroot_buffer)
 	sysroot = sysroot_buffer;
 }
 
-unsigned int sysroot_get_hw_info(void)
+uint32_t sysroot_get_hw_info(void)
 {
 	return sysroot->hw_info;
 }
 
 int sysroot_model_is_vita(void)
 {
-	const unsigned short device_type = __builtin_bswap16(sysroot->device_type);
+	const uint16_t device_type = __builtin_bswap16(sysroot->device_type);
 
 	if ((device_type - 0x100 > 0x11) || sysroot_model_is_dolce()) {
-		const unsigned int hw_info_mask = sysroot->hw_info & 0xFF0000;
+		const uint32_t hw_info_mask = sysroot->hw_info & 0xFF0000;
 
 		if (!sysroot_model_is_diag())
 			return 0;
@@ -31,9 +31,9 @@ int sysroot_model_is_vita(void)
 
 int sysroot_model_is_dolce(void)
 {
-	const unsigned short device_config = __builtin_bswap16(sysroot->device_config);
-	const unsigned short device_type = __builtin_bswap16(sysroot->device_type);
-	const unsigned int hw_info_mask = sysroot->hw_info & 0xFF0000;
+	const uint16_t device_config = __builtin_bswap16(sysroot->device_config);
+	const uint16_t device_type = __builtin_bswap16(sysroot->device_type);
+	const uint32_t hw_info_mask = sysroot->hw_info & 0xFF0000;
 
 	if (device_type == 0x101 && device_config == 0x408)
 		return 1;
@@ -52,7 +52,7 @@ int sysroot_model_is_dolce(void)
 
 int sysroot_model_is_vita2k(void)
 {
-	const unsigned int hw_info_mask = sysroot->hw_info & 0xFF0000;
+	const uint32_t hw_info_mask = sysroot->hw_info & 0xFF0000;
 
 	if (sysroot_model_is_dolce())
 		return 0;
@@ -65,9 +65,9 @@ int sysroot_model_is_vita2k(void)
 
 int sysroot_model_is_diag(void)
 {
-	const unsigned short device_config = __builtin_bswap16(sysroot->device_config);
-	const unsigned short device_type = __builtin_bswap16(sysroot->device_type);
-	const unsigned short type = __builtin_bswap16(sysroot->type);
+	const uint16_t device_config = __builtin_bswap16(sysroot->device_config);
+	const uint16_t device_type = __builtin_bswap16(sysroot->device_type);
+	const uint16_t type = __builtin_bswap16(sysroot->type);
 
 	if (device_type != 0x103 || device_config != 0x10)
 		return 0;

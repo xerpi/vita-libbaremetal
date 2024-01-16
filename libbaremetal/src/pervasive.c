@@ -13,22 +13,22 @@
 #define PERVASIVE_BASECLK_HDMI_CEC	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x1D0))
 
 struct pervasive_dsi_timing_subinfo {
-	unsigned int unk00;
-	unsigned int unk04;
-	unsigned int unk08;
+	uint32_t unk00;
+	uint32_t unk04;
+	uint32_t unk08;
 };
 
 struct pervasive_dsi_timing_info {
-	unsigned int baseclk_0x24_value;
-	unsigned int unk04;
+	uint32_t baseclk_0x24_value;
+	uint32_t unk04;
 	const struct pervasive_dsi_timing_subinfo *subinfo;
-	unsigned int unk0C;
-	unsigned int unk10;
-	unsigned int unk14;
-	unsigned int unk18;
-	unsigned int unk1C;
-	unsigned int unk20;
-	unsigned int unk24;
+	uint32_t unk0C;
+	uint32_t unk10;
+	uint32_t unk14;
+	uint32_t unk18;
+	uint32_t unk1C;
+	uint32_t unk20;
+	uint32_t unk24;
 };
 
 static const struct pervasive_dsi_timing_subinfo stru_BD0408 = {0x17,     0xB01, 0x4180301};
@@ -68,7 +68,7 @@ static const struct pervasive_dsi_timing_info stru_BD06B8 = {0x10, 1, &stru_BD06
 static const struct pervasive_dsi_timing_info stru_BD0430 = {0,    1, &stru_BD0414, 0x36,     0,     0x8100301,  0,          0x40773400, 0,          0x40529000};
 
 static const struct {
-	unsigned int pixelclock;
+	uint32_t pixelclock;
 	const struct pervasive_dsi_timing_info *timing_info;
 } pervasive_dsi_timing_info_lookup[] = {
 	{1006301, &stru_BD0458},
@@ -93,7 +93,7 @@ static const struct {
 	{3712500, &stru_BD0430},
 };
 
-static inline void pervasive_mask_or(unsigned int addr, unsigned int val)
+static inline void pervasive_mask_or(uint32_t addr, uint32_t val)
 {
 	volatile unsigned long tmp;
 
@@ -109,7 +109,7 @@ static inline void pervasive_mask_or(unsigned int addr, unsigned int val)
 	);
 }
 
-static inline void pervasive_mask_and_not(unsigned int addr, unsigned int val)
+static inline void pervasive_mask_and_not(uint32_t addr, uint32_t val)
 {
 	volatile unsigned long tmp;
 
@@ -126,7 +126,7 @@ static inline void pervasive_mask_and_not(unsigned int addr, unsigned int val)
 }
 
 static const struct pervasive_dsi_timing_info *
-pervasive_get_dsi_timing_info_for_pixelclock(unsigned int pixelclock)
+pervasive_get_dsi_timing_info_for_pixelclock(uint32_t pixelclock)
 {
 	int i;
 
@@ -138,9 +138,9 @@ pervasive_get_dsi_timing_info_for_pixelclock(unsigned int pixelclock)
 	return NULL;
 }
 
-unsigned int pervasive_read_misc(unsigned int offset)
+uint32_t pervasive_read_misc(uint32_t offset)
 {
-	return *(unsigned int *)(PERVASIVE_MISC_BASE_ADDR + offset);
+	return *(uint32_t *)(PERVASIVE_MISC_BASE_ADDR + offset);
 }
 
 void pervasive_clock_enable_uart(int bus)
@@ -220,7 +220,7 @@ void pervasive_reset_enter_msif(void)
 
 void pervasive_dsi_set_pixelclock(int bus, int pixelclock)
 {
-	volatile unsigned int *baseclk_dsi_regs = PERVASIVE_BASECLK_DSI_REGS(bus);
+	volatile uint32_t *baseclk_dsi_regs = PERVASIVE_BASECLK_DSI_REGS(bus);
 	const struct pervasive_dsi_timing_info *timing_info =
 		pervasive_get_dsi_timing_info_for_pixelclock(pixelclock);
 
@@ -265,7 +265,7 @@ void pervasive_dsi_set_pixelclock(int bus, int pixelclock)
 
 void pervasive_dsi_misc_unk_enable(int bus)
 {
-	volatile unsigned int *pervasive_misc_regs = (void *)PERVASIVE_MISC_BASE_ADDR;
+	volatile uint32_t *pervasive_misc_regs = (void *)PERVASIVE_MISC_BASE_ADDR;
 
 	if (bus)
 		pervasive_misc_regs[0x52] = 0;
@@ -277,7 +277,7 @@ void pervasive_dsi_misc_unk_enable(int bus)
 
 void pervasive_dsi_misc_unk_disable(int bus)
 {
-	volatile unsigned int *pervasive_misc_regs = (void *)PERVASIVE_MISC_BASE_ADDR;
+	volatile uint32_t *pervasive_misc_regs = (void *)PERVASIVE_MISC_BASE_ADDR;
 
 	if (bus)
 		pervasive_misc_regs[0x52] = 1;
@@ -289,19 +289,19 @@ void pervasive_dsi_misc_unk_disable(int bus)
 
 void pervasive_hdmi_cec_set_enabled(int enable)
 {
-	*(volatile unsigned int *)PERVASIVE_BASECLK_HDMI_CEC = enable;
+	*(volatile uint32_t *)PERVASIVE_BASECLK_HDMI_CEC = enable;
 	dmb();
 }
 
 int pervasive_msif_get_card_insert_state(void)
 {
-	return *(volatile unsigned int *)(PERVASIVE2_BASE_ADDR + 0xF40) & 1;
+	return *(volatile uint32_t *)(PERVASIVE2_BASE_ADDR + 0xF40) & 1;
 }
 
-unsigned int pervasive_msif_unk(void)
+uint32_t pervasive_msif_unk(void)
 {
-	unsigned int val;
-	volatile unsigned int *pervasive2_regs = (void *)PERVASIVE2_BASE_ADDR;
+	uint32_t val;
+	volatile uint32_t *pervasive2_regs = (void *)PERVASIVE2_BASE_ADDR;
 
 	val = pervasive2_regs[0x3D1];
 	pervasive2_regs[0x3D1] = val;
@@ -311,10 +311,10 @@ unsigned int pervasive_msif_unk(void)
 	return val;
 }
 
-void pervasive_msif_set_clock(unsigned int clock)
+void pervasive_msif_set_clock(uint32_t clock)
 {
-	unsigned int val;
-	volatile unsigned int *baseclk_msif_regs = PERVASIVE_BASECLK_MSIF;
+	uint32_t val;
+	volatile uint32_t *baseclk_msif_regs = PERVASIVE_BASECLK_MSIF;
 
 	if ((clock & ~(1 << 2)) > 2)
 		return;

@@ -7,7 +7,7 @@
 
 int spi_init(int bus)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	pervasive_clock_enable_spi(bus);
 	pervasive_reset_exit_spi(bus);
@@ -28,7 +28,7 @@ int spi_init(int bus)
 
 void spi_write_start(int bus)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	/*
 	 * Flush pending data to be read from the FIFO
@@ -42,7 +42,7 @@ void spi_write_start(int bus)
 
 void spi_write_end(int bus)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	spi_regs[2] = 0;
 	spi_regs[4] = 1;
@@ -50,30 +50,30 @@ void spi_write_end(int bus)
 	dsb();
 }
 
-void spi_write(int bus, unsigned int data)
+void spi_write(int bus, uint32_t data)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	spi_regs[1] = data;
 }
 
 int spi_read_available(int bus)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	return spi_regs[0xA];
 }
 
 int spi_read(int bus)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	return spi_regs[0];
 }
 
 void spi_read_end(int bus)
 {
-	volatile unsigned int *spi_regs = SPI_REGS(bus);
+	volatile uint32_t *spi_regs = SPI_REGS(bus);
 
 	spi_regs[4] = 0;
 	spi_regs[4];

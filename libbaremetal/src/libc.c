@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "libc.h"
 
 void *memset(void *s, int c, size_t n)
@@ -27,11 +28,11 @@ void *memcpy(void *dest, const void *src, size_t n)
 
 int memcmp(const void *s1, const void *s2, size_t n)
 {
-	unsigned char u1, u2;
+	uint8_t u1, u2;
 
 	for (; n--; s1++, s2++) {
-		u1 = *(unsigned char *)s1;
-		u2 = *(unsigned char *)s2;
+		u1 = *(uint8_t *)s1;
+		u2 = *(uint8_t *)s2;
 		if (u1 != u2)
 			return u1 - u2;
 	}

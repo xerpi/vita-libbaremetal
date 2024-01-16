@@ -9,7 +9,7 @@
 #define UART_REGS(i)			((void *)(UART_REG_BASE_ADDR + (i) * 0x10000))
 #define UARTCLKGEN_REGS(i)		((void *)(UARTCLKGEN_REG_BASE_ADDR + (i) * 4))
 
-static const unsigned int baudrate_table[] = {
+static const uint32_t baudrate_table[] = {
 	300, 0x12710,
 	600, 0x11388,
 	1200, 0x109C4,
@@ -29,7 +29,7 @@ static const unsigned int baudrate_table[] = {
 	3000000, 0x10001
 };
 
-static unsigned int value_for_baudrate(unsigned int baudrate)
+static uint32_t value_for_baudrate(uint32_t baudrate)
 {
 	int i;
 
@@ -41,11 +41,11 @@ static unsigned int value_for_baudrate(unsigned int baudrate)
 	return 0;
 }
 
-int uart_init(int bus, unsigned int baudrate)
+int uart_init(int bus, uint32_t baudrate)
 {
-	volatile unsigned int *uart_regs = UART_REGS(bus);
-	volatile unsigned int *uartclkgen_regs = UARTCLKGEN_REGS(bus);
-	unsigned int value;
+	volatile uint32_t *uart_regs = UART_REGS(bus);
+	volatile uint32_t *uartclkgen_regs = UARTCLKGEN_REGS(bus);
+	uint32_t value;
 
 	value = value_for_baudrate(baudrate);
 	if (!value)
@@ -72,15 +72,15 @@ int uart_init(int bus, unsigned int baudrate)
 
 void uart_wait_ready(int bus)
 {
-	volatile unsigned int *uart_regs = UART_REGS(bus);
+	volatile uint32_t *uart_regs = UART_REGS(bus);
 
         while (!(uart_regs[0xA] & 0x200))
 		dmb();
 }
 
-void uart_write(int bus, unsigned int data)
+void uart_write(int bus, uint32_t data)
 {
-	volatile unsigned int *uart_regs = UART_REGS(bus);
+	volatile uint32_t *uart_regs = UART_REGS(bus);
 
 	while (!(uart_regs[0xA] & 0x100))
 		dmb();
@@ -88,16 +88,16 @@ void uart_write(int bus, unsigned int data)
         uart_regs[0x1C] = data;
 }
 
-unsigned int uart_read_fifo_data_available(int bus)
+uint32_t uart_read_fifo_data_available(int bus)
 {
-	return ((unsigned int *)UART_REGS(bus))[0x1A] & 0x3F;
+	return ((uint32_t *)UART_REGS(bus))[0x1A] & 0x3F;
 }
 
-unsigned int uart_read(int bus)
+uint32_t uart_read(int bus)
 {
-        unsigned int result;
+        uint32_t result;
 
-	volatile unsigned int *uart_regs = UART_REGS(bus);
+	volatile uint32_t *uart_regs = UART_REGS(bus);
 
 	while (!(uart_regs[0x1A] << 0x1A))
 		dmb();

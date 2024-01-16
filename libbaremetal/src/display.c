@@ -86,7 +86,7 @@ static void display_init_iftu_plane(enum iftu_bus bus, enum iftu_plane plane,
 	enum iftu_plane_config config, const struct display_config *dispcfg)
 {
 	struct iftu_plane_fb_config fb_cfg;
-	unsigned int dst_x, dst_y;
+	uint32_t dst_x, dst_y;
 
 	iftu_plane_set_alpha(bus, plane, 256);
 	iftu_plane_set_csc0(bus, plane, &YCbCr_to_RGB_HDTV_C0180C);
@@ -135,8 +135,8 @@ static void display_iftu_setup(enum iftu_bus bus)
 
 static void display_init_oled(void)
 {
-	static const unsigned int vic = 0;
-	unsigned int pixelclock;
+	static const uint32_t vic = 0;
+	uint32_t pixelclock;
 
 	dsi_get_pixelclock_for_vic(vic, 24, &pixelclock);
 
@@ -153,8 +153,8 @@ static void display_init_oled(void)
 
 static void display_init_lcd(void)
 {
-	static const unsigned int vic = 0;
-	unsigned int pixelclock;
+	static const uint32_t vic = 0;
+	uint32_t pixelclock;
 
 	dsi_get_pixelclock_for_vic(vic, 24, &pixelclock);
 
@@ -171,8 +171,8 @@ static void display_init_lcd(void)
 
 static void display_init_hdmi(void)
 {
-	static const unsigned int vic = 0x8600;
-	unsigned int pixelclock;
+	static const uint32_t vic = 0x8600;
+	uint32_t pixelclock;
 
 	dsi_get_pixelclock_for_vic(vic, 24, &pixelclock);
 

@@ -70,8 +70,8 @@ void iftu_bus_enable(enum iftu_bus bus)
 {
 	volatile void *cregs = IFTU_CREGS(bus);
 
-	writel(IFTU_CREG_CONTROL_ENABLE, cregs + IFTU_CREG_CONTROL);
-	writel(IFTU_CREG_CONTROL2_ALPHA_EN, cregs + IFTU_CREG_CONTROL2);
+	write32(IFTU_CREG_CONTROL_ENABLE, cregs + IFTU_CREG_CONTROL);
+	write32(IFTU_CREG_CONTROL2_ALPHA_EN, cregs + IFTU_CREG_CONTROL2);
 	dmb();
 }
 
@@ -79,7 +79,7 @@ void iftu_bus_plane_config_select(enum iftu_bus bus, enum iftu_plane plane, enum
 {
 	volatile void *cregs = IFTU_CREGS(bus);
 
-	writel(config, cregs + IFTU_CREG_PLANE_CONFIG_BASE(plane) +
+	write32(config, cregs + IFTU_CREG_PLANE_CONFIG_BASE(plane) +
 			       IFTU_CREG_PLANE_CONFIG_SELECT);
 	dmb();
 }
@@ -88,20 +88,20 @@ void iftu_bus_alpha_blending_control(enum iftu_bus bus, int ctrl)
 {
 	volatile void *cregs = IFTU_CREGS(bus);
 
-	writel(ctrl, cregs + IFTU_CREG_ALPHA_BLENDING_CONTROL);
+	write32(ctrl, cregs + IFTU_CREG_ALPHA_BLENDING_CONTROL);
 	dmb();
 }
 
-void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane, unsigned int alpha)
+void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane, uint32_t alpha)
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
 	if (alpha == 256)
-		writel(0, regs + IFTU_PLANE_ALPHA_VALUE);
+		write32(0, regs + IFTU_PLANE_ALPHA_VALUE);
 	else
-		writel(alpha, regs + IFTU_PLANE_ALPHA_VALUE);
+		write32(alpha, regs + IFTU_PLANE_ALPHA_VALUE);
 
-	writel(alpha == 256, regs + IFTU_PLANE_ALPHA_CONTROL);
+	write32(alpha == 256, regs + IFTU_PLANE_ALPHA_CONTROL);
 
 	dmb();
 }
@@ -110,7 +110,7 @@ void iftu_plane_set_csc_enabled(enum iftu_bus bus, enum iftu_plane plane, bool e
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
-	writel(enabled, regs + IFTU_PLANE_CSC_CONTROL);
+	write32(enabled, regs + IFTU_PLANE_CSC_CONTROL);
 
 	dmb();
 }
@@ -119,17 +119,17 @@ void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane, const struct 
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
-	writel(csc->unk00, regs + IFTU_PLANE_CSC_UNK_104);
-	writel(csc->unk04, regs + IFTU_PLANE_CSC_UNK_108);
-	writel(csc->ctm[0][0], regs + IFTU_PLANE_CSC_RR_0);
-	writel(csc->ctm[0][1], regs + IFTU_PLANE_CSC_RG_0);
-	writel(csc->ctm[0][2], regs + IFTU_PLANE_CSC_RB_0);
-	writel(csc->ctm[1][0], regs + IFTU_PLANE_CSC_GR_0);
-	writel(csc->ctm[1][1], regs + IFTU_PLANE_CSC_GG_0);
-	writel(csc->ctm[1][2], regs + IFTU_PLANE_CSC_GB_0);
-	writel(csc->ctm[2][0], regs + IFTU_PLANE_CSC_BR_0);
-	writel(csc->ctm[2][1], regs + IFTU_PLANE_CSC_BG_0);
-	writel(csc->ctm[2][2], regs + IFTU_PLANE_CSC_BB_0);
+	write32(csc->unk00, regs + IFTU_PLANE_CSC_UNK_104);
+	write32(csc->unk04, regs + IFTU_PLANE_CSC_UNK_108);
+	write32(csc->ctm[0][0], regs + IFTU_PLANE_CSC_RR_0);
+	write32(csc->ctm[0][1], regs + IFTU_PLANE_CSC_RG_0);
+	write32(csc->ctm[0][2], regs + IFTU_PLANE_CSC_RB_0);
+	write32(csc->ctm[1][0], regs + IFTU_PLANE_CSC_GR_0);
+	write32(csc->ctm[1][1], regs + IFTU_PLANE_CSC_GG_0);
+	write32(csc->ctm[1][2], regs + IFTU_PLANE_CSC_GB_0);
+	write32(csc->ctm[2][0], regs + IFTU_PLANE_CSC_BR_0);
+	write32(csc->ctm[2][1], regs + IFTU_PLANE_CSC_BG_0);
+	write32(csc->ctm[2][2], regs + IFTU_PLANE_CSC_BB_0);
 
 	dmb();
 }
@@ -138,21 +138,21 @@ void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct 
 {
 	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
 
-	writel(csc->unk00, regs + IFTU_PLANE_CSC_UNK_130);
-	writel(csc->unk04, regs + IFTU_PLANE_CSC_UNK_134);
-	writel(csc->ctm[0][0], regs + IFTU_PLANE_CSC_RR_1);
-	writel(csc->ctm[0][1], regs + IFTU_PLANE_CSC_RG_1);
-	writel(csc->ctm[0][2], regs + IFTU_PLANE_CSC_RB_1);
-	writel(csc->ctm[1][0], regs + IFTU_PLANE_CSC_GR_1);
-	writel(csc->ctm[1][1], regs + IFTU_PLANE_CSC_GG_1);
-	writel(csc->ctm[1][2], regs + IFTU_PLANE_CSC_GB_1);
-	writel(csc->ctm[2][0], regs + IFTU_PLANE_CSC_BR_1);
-	writel(csc->ctm[2][1], regs + IFTU_PLANE_CSC_BG_1);
-	writel(csc->ctm[2][2], regs + IFTU_PLANE_CSC_BB_1);
-	writel(csc->unk08, regs + IFTU_PLANE_CSC_UNK_15C);
-	writel(csc->unk0C, regs + IFTU_PLANE_CSC_UNK_160);
-	writel(csc->unk10, regs + IFTU_PLANE_CSC_UNK_164);
-	writel(csc->unk14, regs + IFTU_PLANE_CSC_UNK_168);
+	write32(csc->unk00, regs + IFTU_PLANE_CSC_UNK_130);
+	write32(csc->unk04, regs + IFTU_PLANE_CSC_UNK_134);
+	write32(csc->ctm[0][0], regs + IFTU_PLANE_CSC_RR_1);
+	write32(csc->ctm[0][1], regs + IFTU_PLANE_CSC_RG_1);
+	write32(csc->ctm[0][2], regs + IFTU_PLANE_CSC_RB_1);
+	write32(csc->ctm[1][0], regs + IFTU_PLANE_CSC_GR_1);
+	write32(csc->ctm[1][1], regs + IFTU_PLANE_CSC_GG_1);
+	write32(csc->ctm[1][2], regs + IFTU_PLANE_CSC_GB_1);
+	write32(csc->ctm[2][0], regs + IFTU_PLANE_CSC_BR_1);
+	write32(csc->ctm[2][1], regs + IFTU_PLANE_CSC_BG_1);
+	write32(csc->ctm[2][2], regs + IFTU_PLANE_CSC_BB_1);
+	write32(csc->unk08, regs + IFTU_PLANE_CSC_UNK_15C);
+	write32(csc->unk0C, regs + IFTU_PLANE_CSC_UNK_160);
+	write32(csc->unk10, regs + IFTU_PLANE_CSC_UNK_164);
+	write32(csc->unk14, regs + IFTU_PLANE_CSC_UNK_168);
 
 	dmb();
 }
@@ -160,27 +160,27 @@ void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct 
 void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
 				  enum iftu_plane_config config,
 				  const struct iftu_plane_fb_config *fb,
-				  unsigned int dst_x, unsigned int dst_y,
-				  unsigned int dst_w, unsigned int dst_h)
+				  uint32_t dst_x, uint32_t dst_y,
+				  uint32_t dst_w, uint32_t dst_h)
 {
 	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
 
 	/* TODO: Properly use pitch instead of width */
 
-	writel(fb->paddr, regs + IFTU_PLANE_CONFIG_FB_PADDR);
-	writel(0, regs + IFTU_PLANE_CONFIG_SRC_X);
-	writel(0, regs + IFTU_PLANE_CONFIG_SRC_Y);
-	writel(fb->pixelformat, regs + IFTU_PLANE_CONFIG_SRC_PIXELFMT);
-	writel(fb->width, regs + IFTU_PLANE_CONFIG_SRC_FB_WIDTH);
-	writel(fb->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
-	writel(0, regs + IFTU_PLANE_CONFIG_CONTROL);
-	writel(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
-	writel(dst_w, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
-	writel(dst_h, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
-	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
-	writel(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
-	writel(dst_x, regs + IFTU_PLANE_CONFIG_DST_X);
-	writel(dst_y, regs + IFTU_PLANE_CONFIG_DST_Y);
+	write32(fb->paddr, regs + IFTU_PLANE_CONFIG_FB_PADDR);
+	write32(0, regs + IFTU_PLANE_CONFIG_SRC_X);
+	write32(0, regs + IFTU_PLANE_CONFIG_SRC_Y);
+	write32(fb->pixelformat, regs + IFTU_PLANE_CONFIG_SRC_PIXELFMT);
+	write32(fb->width, regs + IFTU_PLANE_CONFIG_SRC_FB_WIDTH);
+	write32(fb->height, regs + IFTU_PLANE_CONFIG_SRC_FB_HEIGHT);
+	write32(0, regs + IFTU_PLANE_CONFIG_CONTROL);
+	write32(0x2000, regs + IFTU_PLANE_CONFIG_DST_PIXELFMT);
+	write32(dst_w, regs + IFTU_PLANE_CONFIG_DST_WIDTH);
+	write32(dst_h, regs + IFTU_PLANE_CONFIG_DST_HEIGHT);
+	write32(0x10000, regs + IFTU_PLANE_CONFIG_SRC_W);
+	write32(0x10000, regs + IFTU_PLANE_CONFIG_SRC_H);
+	write32(dst_x, regs + IFTU_PLANE_CONFIG_DST_X);
+	write32(dst_y, regs + IFTU_PLANE_CONFIG_DST_Y);
 
 	dmb();
 }
@@ -190,7 +190,7 @@ void iftu_plane_config_set_enabled(enum iftu_bus bus, enum iftu_plane plane,
 {
 	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
 
-	writel(!enabled, regs + IFTU_PLANE_CONFIG_CONTROL);
+	write32(!enabled, regs + IFTU_PLANE_CONFIG_CONTROL);
 
 	dmb();
 }

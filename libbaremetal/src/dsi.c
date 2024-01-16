@@ -8,18 +8,18 @@
 #define DSI_REGS(i)	((void *)(DSI_BASE_ADDR + (i) * 0x10000))
 
 struct dsi_timing_subsubinfo {
-	unsigned int unk00;
-	unsigned int unk04;
-	unsigned int unk08;
-	unsigned int unk0C;
-	unsigned int unk10;
+	uint32_t unk00;
+	uint32_t unk04;
+	uint32_t unk08;
+	uint32_t unk0C;
+	uint32_t unk10;
 };
 
 struct dsi_timing_subinfo {
-	unsigned int unk00;
-	unsigned int unk04;
-	unsigned int unk08;
-	unsigned int unk0C;
+	uint32_t unk00;
+	uint32_t unk04;
+	uint32_t unk08;
+	uint32_t unk0C;
 	struct dsi_timing_subsubinfo subsubinfo;
 };
 
@@ -29,20 +29,20 @@ enum dsi_timing_info_flags {
 };
 
 struct dsi_timing_info {
-	unsigned int flags; /* enum dsi_timing_info_flags */
-	unsigned int pixelclock_24bpp;
+	uint32_t flags; /* enum dsi_timing_info_flags */
+	uint32_t pixelclock_24bpp;
 	const struct dsi_timing_subinfo *subinfo_24bpp;
-	unsigned int pixelclock_30bpp;
+	uint32_t pixelclock_30bpp;
 	const struct dsi_timing_subinfo *subinfo_30bpp;
-	unsigned int htotal;
-	unsigned int vtotal;
-	unsigned int mode; // 1 = interlaced, 0 = progressive
-	unsigned int HFP;
-	unsigned int HSW;
-	unsigned int HBP;
-	unsigned int VFP;
-	unsigned int VSW;
-	unsigned int VBP;
+	uint32_t htotal;
+	uint32_t vtotal;
+	uint32_t mode; // 1 = interlaced, 0 = progressive
+	uint32_t HFP;
+	uint32_t HSW;
+	uint32_t HBP;
+	uint32_t VFP;
+	uint32_t VSW;
+	uint32_t VBP;
 };
 
 static struct dsi_timing_subinfo stru_A19358;
@@ -78,7 +78,7 @@ static const struct dsi_timing_info stru_BD0A8C = {0,   2970000, &stru_BD0B34, 3
 static const struct dsi_timing_info stru_BD0AE8 = {0,   2967033, &stru_BD0C00, 3708791, &stru_BD0CF0, 2750, 1125, 0,  638, 44,  148, 4,  5, 36}; /* 1920x1080p @ 24Hz (VIC 32) */
 
 static struct {
-	unsigned int vic;
+	uint32_t vic;
 	const struct dsi_timing_info *timing_info;
 } dsi_timing_info_lookup[] = {
 	{0, &stru_BD0D14},
@@ -109,7 +109,7 @@ static int dsi_unk07_for_bus[] = {
 };
 
 static const struct dsi_timing_info *
-dsi_get_timing_info_for_vic(unsigned int vic)
+dsi_get_timing_info_for_vic(uint32_t vic)
 {
 	int i;
 
@@ -129,7 +129,7 @@ void dsi_init(void)
 		memcpy(&stru_A19358, &stru_BD0F08, sizeof(stru_A19358));
 }
 
-int dsi_get_dimensions_for_vic(unsigned int vic, unsigned int *width, unsigned int *height)
+int dsi_get_dimensions_for_vic(uint32_t vic, uint32_t *width, uint32_t *height)
 {
 	const struct dsi_timing_info *info = dsi_get_timing_info_for_vic(vic);
 	if (!info)
@@ -151,7 +151,7 @@ int dsi_get_dimensions_for_vic(unsigned int vic, unsigned int *width, unsigned i
 	return 0;
 }
 
-int dsi_get_pixelclock_for_vic(unsigned int vic, unsigned int bpp, unsigned int *pixelclock)
+int dsi_get_pixelclock_for_vic(uint32_t vic, uint32_t bpp, uint32_t *pixelclock)
 {
 	const struct dsi_timing_info *info = dsi_get_timing_info_for_vic(vic);
 	if (!info)
@@ -167,15 +167,15 @@ int dsi_get_pixelclock_for_vic(unsigned int vic, unsigned int bpp, unsigned int 
 	return 0;
 }
 
-void dsi_start_master(enum dsi_bus bus, unsigned int vic)
+void dsi_start_master(enum dsi_bus bus, uint32_t vic)
 {
 	static const int pixel_size = 24;
 
-	unsigned int packet[64];
-	unsigned int packet_length;
+	uint32_t packet[64];
+	uint32_t packet_length;
 	const struct dsi_timing_subinfo *subinfo;
 	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
-	volatile unsigned int *dsi_regs = DSI_REGS(bus);
+	volatile uint32_t *dsi_regs = DSI_REGS(bus);
 	int lanes = dsi_lanes_for_bus[bus];
 	int unk07 = dsi_unk07_for_bus[bus];
 
@@ -216,18 +216,18 @@ void dsi_start_master(enum dsi_bus bus, unsigned int vic)
 		dsi_regs[0x20F] = subinfo->unk04 | (subinfo->unk04 << 16);
 	}
 
-	unsigned int flags = timing_info->flags;
-	unsigned int mode = timing_info->mode;
-	unsigned int htotal = timing_info->htotal;
-	unsigned int vtotal = timing_info->vtotal;
-	unsigned int HFP = timing_info->HFP;
-	unsigned int HBP = timing_info->HBP;
-	unsigned int HSW = timing_info->HSW;
-	unsigned int hactive = htotal - (HFP + HSW + HBP);
-	unsigned int VFP = timing_info->VFP;
-	unsigned int VSW = timing_info->VSW;
-	unsigned int VBP = timing_info->VBP;
-	unsigned int vactive = vtotal - (VFP + VSW + VBP);
+	uint32_t flags = timing_info->flags;
+	uint32_t mode = timing_info->mode;
+	uint32_t htotal = timing_info->htotal;
+	uint32_t vtotal = timing_info->vtotal;
+	uint32_t HFP = timing_info->HFP;
+	uint32_t HBP = timing_info->HBP;
+	uint32_t HSW = timing_info->HSW;
+	uint32_t hactive = htotal - (HFP + HSW + HBP);
+	uint32_t VFP = timing_info->VFP;
+	uint32_t VSW = timing_info->VSW;
+	uint32_t VBP = timing_info->VBP;
+	uint32_t vactive = vtotal - (VFP + VSW + VBP);
 
 	if (bus == 1) {
 		dsi_regs[0x20D] = 0xF;
@@ -270,13 +270,13 @@ void dsi_start_master(enum dsi_bus bus, unsigned int vic)
 			goto packet_write;
 		}
 
-		unsigned int uVar6;
-		unsigned int *puVar4;
+		uint32_t uVar6;
+		uint32_t *puVar4;
 
 		if (mode == 0) {
-			unsigned int foo1;
-			unsigned int foo2;
-			unsigned int foo3;
+			uint32_t foo1;
+			uint32_t foo2;
+			uint32_t foo3;
 			uVar6 = VBP - 2;
 
 			if (flags & 1)
@@ -393,8 +393,8 @@ void dsi_start_master(enum dsi_bus bus, unsigned int vic)
 			*puVar4 = 0xc000000;
 			packet_length = (int)puVar4 + (4 - (int)packet);
 		} else {
-			unsigned int tmp1;
-			unsigned int tmp2;
+			uint32_t tmp1;
+			uint32_t tmp2;
 			uVar6 = VBP - 3;
 
 			if (flags & 2)
@@ -532,7 +532,7 @@ void dsi_start_master(enum dsi_bus bus, unsigned int vic)
 		packet[18] = 0xc000000;
 		packet_length = 19;
 packet_write:
-		for (unsigned int i = 0; i < packet_length; i++)
+		for (uint32_t i = 0; i < packet_length; i++)
 			dsi_regs[0x140] = packet[i];
 	}
 
@@ -541,7 +541,7 @@ packet_write:
 
 void dsi_stop_master(enum dsi_bus bus)
 {
-	volatile unsigned int *dsi_regs = DSI_REGS(bus);
+	volatile uint32_t *dsi_regs = DSI_REGS(bus);
 	int lanes = dsi_lanes_for_bus[bus];
 
 	while ((dsi_regs[0x12] & 0xF) != 0)
@@ -560,30 +560,30 @@ void dsi_stop_master(enum dsi_bus bus)
 	pervasive_dsi_misc_unk_disable(bus);
 }
 
-void dsi_start_display(enum dsi_bus bus, unsigned int vic, unsigned int unk)
+void dsi_start_display(enum dsi_bus bus, uint32_t vic, uint32_t unk)
 {
-	static const unsigned int pixel_size = 24;
-	static const unsigned int intr_mask = 2;
+	static const uint32_t pixel_size = 24;
+	static const uint32_t intr_mask = 2;
 
-	static const unsigned int lookup[] = {2, 2, 3, 4};
+	static const uint32_t lookup[] = {2, 2, 3, 4};
 
 	const struct dsi_timing_info *timing_info = dsi_get_timing_info_for_vic(vic);
-	volatile unsigned int *dsi_regs = DSI_REGS(bus);
+	volatile uint32_t *dsi_regs = DSI_REGS(bus);
 	int lanes = dsi_lanes_for_bus[bus];
 
-	unsigned int flags = timing_info->flags;
-	unsigned int htotal = timing_info->htotal;
-	unsigned int vtotal = timing_info->vtotal;
-	unsigned int HFP = timing_info->HFP;
-	unsigned int HBP = timing_info->HBP;
-	unsigned int HSW = timing_info->HSW;
-	unsigned int VFP = timing_info->VFP;
-	unsigned int VSW = timing_info->VSW;
-	unsigned int VBP = timing_info->VBP;
-	unsigned int mode = timing_info->mode;
+	uint32_t flags = timing_info->flags;
+	uint32_t htotal = timing_info->htotal;
+	uint32_t vtotal = timing_info->vtotal;
+	uint32_t HFP = timing_info->HFP;
+	uint32_t HBP = timing_info->HBP;
+	uint32_t HSW = timing_info->HSW;
+	uint32_t VFP = timing_info->VFP;
+	uint32_t VSW = timing_info->VSW;
+	uint32_t VBP = timing_info->VBP;
+	uint32_t mode = timing_info->mode;
 
-	unsigned int hsync_end = HBP + HSW;
-	unsigned int hact = htotal - (HBP + HSW) - HFP;
+	uint32_t hsync_end = HBP + HSW;
+	uint32_t hact = htotal - (HBP + HSW) - HFP;
 	if (flags & (1 << 3))
 		hact -= 2;
 
@@ -592,7 +592,7 @@ void dsi_start_display(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 	else
 		dsi_regs[1] = 0;
 
-	unsigned int clocks_per_pixel;
+	uint32_t clocks_per_pixel;
 	if (lanes == 2) {
 		clocks_per_pixel = 6;
 	} else {
@@ -602,17 +602,17 @@ void dsi_start_display(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 			clocks_per_pixel = 5;
 	}
 
-	unsigned int HFP_start = hact + hsync_end;
-	unsigned int HSW_clocks = HSW * clocks_per_pixel;
-	unsigned int htotal_clocks = htotal * clocks_per_pixel >> 1;
+	uint32_t HFP_start = hact + hsync_end;
+	uint32_t HSW_clocks = HSW * clocks_per_pixel;
+	uint32_t htotal_clocks = htotal * clocks_per_pixel >> 1;
 	dsi_regs[2] = htotal_clocks;
 
-	unsigned int v20;
-	unsigned int v21;
+	uint32_t v20;
+	uint32_t v21;
 
 	if (mode == 1) { // Interlaced
-		unsigned int v36 = HFP_start * clocks_per_pixel;
-		unsigned int v37 = htotal * clocks_per_pixel >> 2;
+		uint32_t v36 = HFP_start * clocks_per_pixel;
+		uint32_t v37 = htotal * clocks_per_pixel >> 2;
 
 		v20 = vtotal + 1;
 		v21 = (vtotal + 1) >> 1;
@@ -641,8 +641,8 @@ void dsi_start_display(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 	}
 
 	if (lanes == 3 && pixel_size == 30) {
-		unsigned int v34;
-		unsigned int v35;
+		uint32_t v34;
+		uint32_t v35;
 
 		if (vtotal == 525) {
 			dsi_regs[5] = 0x130083A;
@@ -669,7 +669,7 @@ void dsi_start_display(enum dsi_bus bus, unsigned int vic, unsigned int unk)
 
 skip:
 	dsi_regs[0xF] = 1;
-	unsigned int vact_start = VBP + VSW;
+	uint32_t vact_start = VBP + VSW;
 	dsi_regs[0x10] = (((v21 + vact_start - 8) << 16) & 0x1FFF0000) | ((vact_start - 8) & 0x1FFF);
 	if (mode == 1) {
 		dsi_regs[0x17] = ((v21 << 16) & 0x1FFF0000) | 1;
@@ -692,7 +692,7 @@ skip:
 	else
 		dsi_regs[0x20E] = 0;
 
-	unsigned int v30;
+	uint32_t v30;
 	if (unk == 1)
 		v30 = (bus ^ 1) & 1;
 	else
@@ -700,7 +700,7 @@ skip:
 
 	dsi_regs[0x142] = 0xFFFFFFFF;
 
-	unsigned int v31 = (unk == 2) ? (bus & 1) : 0;
+	uint32_t v31 = (unk == 2) ? (bus & 1) : 0;
 	if (v30 || v31 || (unk - 1 > 3))
 		dsi_regs[0] = 1;
 	else

@@ -1,7 +1,7 @@
 #include "draw.h"
 #include "display.h"
 
-void draw_rectangle(int x, int y, int w, int h, unsigned int color)
+void draw_rectangle(int x, int y, int w, int h, uint32_t color)
 {
 	int i, j;
 

@@ -6,19 +6,19 @@
 #define GLYPH_SIZE	16
 #define BG_COLOR	BLACK
 
-extern unsigned char msx_font[];
+extern uint8_t msx_font[];
 
-void font_draw_char(int x, int y, unsigned int color, char c)
+void font_draw_char(int x, int y, uint32_t color, char c)
 {
 	int i, j;
-	unsigned char *glyph = &msx_font[c * 8];
+	uint8_t *glyph = &msx_font[c * 8];
 
 	if (c < 0x20 || c > 0x7E)
 		return;
 
 	for (i = 0; i < 8; i++) {
 		for (j = 0; j < 8; j++) {
-			unsigned int c = BG_COLOR;
+			uint32_t c = BG_COLOR;
 
 			if (*glyph & (128 >> j))
 				c = color;
@@ -29,7 +29,7 @@ void font_draw_char(int x, int y, unsigned int color, char c)
 	}
 }
 
-void font_draw_string(int x, int y, unsigned int color, const char *s)
+void font_draw_string(int x, int y, uint32_t color, const char *s)
 {
 	const struct display_config *config = display_get_current_config();
 	int start_x = x;
@@ -55,7 +55,7 @@ void font_draw_string(int x, int y, unsigned int color, const char *s)
 	}
 }
 
-void font_draw_stringf(int x, int y, unsigned int color, const char *s, ...)
+void font_draw_stringf(int x, int y, uint32_t color, const char *s, ...)
 {
 	char buf[256];
 	va_list argptr;

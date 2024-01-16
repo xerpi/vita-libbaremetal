@@ -1,7 +1,9 @@
 #ifndef PERVASIVE_H
 #define PERVASIVE_H
 
-unsigned int pervasive_read_misc(unsigned int offset);
+#include <stdint.h>
+
+uint32_t pervasive_read_misc(uint32_t offset);
 
 void pervasive_clock_enable_uart(int bus);
 void pervasive_reset_exit_uart(int bus);
@@ -31,7 +33,7 @@ void pervasive_dsi_misc_unk_disable(int bus);
 void pervasive_hdmi_cec_set_enabled(int enable);
 
 int pervasive_msif_get_card_insert_state(void);
-unsigned int pervasive_msif_unk(void);
-void pervasive_msif_set_clock(unsigned int clock);
+uint32_t pervasive_msif_unk(void);
+void pervasive_msif_set_clock(uint32_t clock);
 
 #endif
