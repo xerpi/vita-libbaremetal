@@ -108,14 +108,24 @@ uint32_t uart_read(int bus)
         return result;
 }
 
+void uart_putc(int bus, char c)
+{
+	uart_write(bus, c);
+
+	if (c == '\n')
+		uart_write(bus, '\r');
+}
+
 void uart_print(int bus, const char *str)
 {
-	while (*str) {
-		if (*str == '\n')
-			uart_write(bus, '\r');
+	while (*str)
+		uart_putc(bus, *str++);
+}
 
-		uart_write(bus, *str++);
-	}
+void uart_puts(int bus, const char *str)
+{
+	uart_print(bus, str);
+	uart_putc(bus, '\n');
 }
 
 void uart_printf(int bus, const char *s, ...)
