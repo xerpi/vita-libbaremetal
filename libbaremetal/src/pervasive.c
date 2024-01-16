@@ -12,7 +12,7 @@
 
 #define PERVASIVE_BASECLK_MSIF		((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0xB0))
 #define PERVASIVE_BASECLK_DSI_REGS(i)	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x180 - (i) * 0x80))
-#define PERVASIVE_BASECLK_HDMI_CEC	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x1D0))
+#define PERVASIVE_BASECLK_HDMI_CLOCK	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x1D0))
 
 struct pervasive_dsi_timing_subinfo {
 	uint32_t unk00;
@@ -220,6 +220,26 @@ void pervasive_reset_enter_msif(void)
 	pervasive_mask_or(PERVASIVE_RESET_BASE_ADDR + 0xB0, 1);
 }
 
+void pervasive_clock_enable_sdif(int bus)
+{
+	pervasive_mask_or(PERVASIVE_GATE_BASE_ADDR + 0xA0 + 4 * bus, 1);
+}
+
+void pervasive_clock_disable_sdif(int bus)
+{
+	pervasive_mask_and_not(PERVASIVE_GATE_BASE_ADDR + 0xA0 + 4 * bus, 1);
+}
+
+void pervasive_reset_exit_sdif(int bus)
+{
+	pervasive_mask_and_not(PERVASIVE_RESET_BASE_ADDR + 0xA0 + 4 * bus, 1);
+}
+
+void pervasive_reset_enter_sdif(int bus)
+{
+	pervasive_mask_or(PERVASIVE_GATE_BASE_ADDR + 0xA0 + 4 * bus, 1);
+}
+
 void pervasive_dsi_set_pixelclock(int bus, int pixelclock)
 {
 	volatile uint32_t *baseclk_dsi_regs = PERVASIVE_BASECLK_DSI_REGS(bus);
@@ -289,9 +309,9 @@ void pervasive_dsi_misc_unk_disable(int bus)
 	dmb();
 }
 
-void pervasive_hdmi_cec_set_enabled(int enable)
+void pervasive_hdmi_clock_set_enabled(int enable)
 {
-	*(volatile uint32_t *)PERVASIVE_BASECLK_HDMI_CEC = enable;
+	*(volatile uint32_t *)PERVASIVE_BASECLK_HDMI_CLOCK = enable;
 	dmb();
 }
 
@@ -328,4 +348,32 @@ void pervasive_msif_set_clock(uint32_t clock)
 
 	*baseclk_msif_regs = (clock & 0b11) | val;
 	dmb();
+}
+
+void pervasive_sdif_misc_0x110_0x11C(int bus, uint32_t value)
+{
+	write32(value, PERVASIVE_MISC_BASE_ADDR + 0x110 + bus * 4);
+	dmb();
+}
+
+void pervasive_sdif_misc_0x124(int bus, uint32_t value)
+{
+	if ((bus < 4) && (value < 2)) {
+		uint32_t tmp = read32(PERVASIVE_MISC_BASE_ADDR + 0x124);
+		tmp &= ~(1 << (bus & 0xff));
+		tmp |= value << (bus & 0xff);
+		write32(tmp, PERVASIVE_MISC_BASE_ADDR + 0x124);
+		dmb();
+	}
+}
+
+void pervasive_sdif_misc_0x310(int bus, uint32_t value)
+{
+	if ((bus < 4) && (value < 7)) {
+		uint32_t tmp = read32(PERVASIVE_MISC_BASE_ADDR + 0x310);
+		tmp &= ~(7 << ((bus << 3) & 0xff));
+		tmp |= value << ((bus << 3) & 0xff);
+		write32(tmp, PERVASIVE_MISC_BASE_ADDR + 0x310);
+		dmb();
+	}
 }

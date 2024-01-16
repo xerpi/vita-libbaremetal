@@ -105,7 +105,7 @@ static void hdmi_update_bits(uint8_t addr, uint8_t reg,
 
 int hdmi_init(void)
 {
-	pervasive_hdmi_cec_set_enabled(1);
+	pervasive_hdmi_clock_set_enabled(1);
 
 	syscon_set_hdmi_cdc_hpd(1);
 
