@@ -246,6 +246,27 @@ static int sdif_reset(enum sdif_device device, int flags)
 int sdif_init(enum sdif_device device)
 {
 	sdif_reset(device, SDIF_RESET_HW | SDIF_RESET_SW);
+
+	if (sdif_is_card_inserted(device)) {
+		enum sdif_bus_voltage voltage;
+
+		if ((g_unk_18[device] & 0x300000) == 0) {
+			if ((g_unk_18[device] & 0x60000) == 0) {
+				if (g_unk_18[device] & (1 << 7)) {
+					voltage = SDIF_BUS_VOLTAGE_1V8;
+				} else {
+					voltage = 0;
+				}
+			} else {
+				voltage = SDIF_BUS_VOLTAGE_3V0;
+			}
+		} else {
+			voltage = SDIF_BUS_VOLTAGE_3V3;
+		}
+
+		sdif_bus_voltage_select(device, voltage);
+	}
+
 	return 0;
 }
 
@@ -254,4 +275,35 @@ bool sdif_is_card_inserted(enum sdif_device device)
 	volatile sd_mmc_registers *host_regs = sdif_registers(device);
 
 	return (host_regs->present_state >> 16) & 1;
+}
+
+void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage voltage)
+{
+	volatile sd_mmc_registers *host_regs = sdif_registers(device);
+
+	uint32_t delay = 102;
+	do {
+		/* Bit 17 – CARDSS Card State Stable */
+		if ((host_regs->present_state >> 17) & 1)
+			break;
+	} while ((device != SDIF_DEVICE_GC) || (delay--, delay != 0));
+
+
+	/* Bit 16 – CARDINS Card Inserted */
+	if ((host_regs->present_state >> 16) & 1) {
+		host_regs->power_control &= 0xfe;
+		host_regs->power_control |= voltage << 1;
+		host_regs->power_control |= 1;
+		host_regs->clock_control = 0;
+		host_regs->clock_control = 0x8001;
+
+		do {
+			/* Bit 1 – INTCLKS Internal Clock Stable */
+		} while (!(host_regs->clock_control & 2));
+
+		if (device == SDIF_DEVICE_WLAN_BT)
+			host_regs->clock_control |= 4;
+
+		host_regs->host_control1 = 0;
+	}
 }
