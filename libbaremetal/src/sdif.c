@@ -248,3 +248,10 @@ int sdif_init(enum sdif_device device)
 	sdif_reset(device, SDIF_RESET_HW | SDIF_RESET_SW);
 	return 0;
 }
+
+bool sdif_is_card_inserted(enum sdif_device device)
+{
+	volatile sd_mmc_registers *host_regs = sdif_registers(device);
+
+	return (host_regs->present_state >> 16) & 1;
+}

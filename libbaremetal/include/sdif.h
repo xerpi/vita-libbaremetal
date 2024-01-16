@@ -1,6 +1,7 @@
 #ifndef SDIF_H
 #define SDIF_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 enum sdif_device {
@@ -12,5 +13,6 @@ enum sdif_device {
 };
 
 int sdif_init(enum sdif_device device);
+bool sdif_is_card_inserted(enum sdif_device device);
 
 #endif
