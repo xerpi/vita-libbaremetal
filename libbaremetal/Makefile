@@ -19,7 +19,7 @@ DEPS	= $(OBJS:.o=.d)
 all: $(TARGET).a
 
 $(TARGET).a: $(OBJS) $(MBEDTLS)/library/libmbedcrypto.a
-	$(AR) rcsv $@ $(OBJS) $(wildcard $(MBEDTLS)/library/*.o)
+	$(AR) rcs $@ $(OBJS) $(wildcard $(MBEDTLS)/library/*.o)
 
 %.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
