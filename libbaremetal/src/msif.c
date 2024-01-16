@@ -14,7 +14,7 @@
 #include "mbedtls/aes.h"
 #include "mbedtls/des.h"
 
-#define MSIF_BASE_ADDR		((void *)0xE0900000)
+#define MSIF_BASE_ADDR		0xE0900000
 
 #define MSIF_COMMAND_REG	0x30
 #define MSIF_DATA_REG		0x34
@@ -642,18 +642,18 @@ static void msif_auth(const uint8_t key[32], uint32_t auth_val)
 
 void msif_setup(const uint8_t key[32])
 {
-	uint32_t misc_0x0000;
+	uint32_t soc_revision;
 	uint32_t hw_info_masked;
 	uint32_t model_name_type, unkC20, write_protected;
 
 	msif_reset_sub_C286C4();
 	ms_get_info(&model_name_type, &unkC20, &write_protected);
 
-	misc_0x0000 = pervasive_read_misc(0);
+	soc_revision = pervasive_get_soc_revision();
 	hw_info_masked = sysroot_get_hw_info() & 0xFF0000;
 
-	if (misc_0x0000) {
-		if (misc_0x0000 == 0x100) {
+	if (soc_revision) {
+		if (soc_revision == 0x100) {
 			uint32_t val;
 			if (hw_info_masked < 0x800000)
 				val = 0x35000C;

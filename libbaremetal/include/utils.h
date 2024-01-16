@@ -17,32 +17,32 @@ static inline uint32_t rbit(uint32_t x)
 	return xrev;
 }
 
-static inline uint8_t read8(volatile void *addr)
+static inline uint8_t read8(uintptr_t addr)
 {
 	return *(volatile uint8_t *)addr;
 }
 
-static inline uint16_t read16(volatile void *addr)
+static inline uint16_t read16(uintptr_t addr)
 {
 	return *(volatile uint16_t *)addr;
 }
 
-static inline uint32_t read32(volatile void *addr)
+static inline uint32_t read32(uintptr_t addr)
 {
 	return *(volatile uint32_t *)addr;
 }
 
-static inline void write8(uint8_t val, volatile void *addr)
+static inline void write8(uint8_t val, uintptr_t addr)
 {
 	*(volatile uint8_t *)addr = val;
 }
 
-static inline void write16(uint16_t val, volatile void *addr)
+static inline void write16(uint16_t val, uintptr_t addr)
 {
 	*(volatile uint16_t *)addr = val;
 }
 
-static inline void write32(uint32_t val, volatile void *addr)
+static inline void write32(uint32_t val, uintptr_t addr)
 {
 	*(volatile uint32_t *)addr = val;
 }

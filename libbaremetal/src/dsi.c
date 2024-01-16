@@ -123,7 +123,7 @@ dsi_get_timing_info_for_vic(uint32_t vic)
 
 void dsi_init(void)
 {
-	if ((pervasive_read_misc(0x0000) & 0x1FF00) > 0xFF)
+	if ((pervasive_get_soc_revision() & 0x1FF00) > 0xFF)
 		memcpy(&stru_A19358, &stru_BD0FA0, sizeof(stru_A19358));
 	else
 		memcpy(&stru_A19358, &stru_BD0F08, sizeof(stru_A19358));
@@ -184,7 +184,7 @@ void dsi_start_master(enum dsi_bus bus, uint32_t vic)
 	dsi_regs[0x15] = 0;
 	dsi_regs[0x146] = 1;
 
-	if ((pervasive_read_misc(0x0000) & 0x1FF00) > 0xFF) {
+	if ((pervasive_get_soc_revision() & 0x1FF00) > 0xFF) {
 		dsi_regs[0x240] = (dsi_regs[0x240] & 0xFFFFFFFC) | 2;
 		dsi_regs[0x241] = (dsi_regs[0x241] & 0xFFFFFFFC) | 2;
 		dsi_regs[0x242] = (dsi_regs[0x242] & 0xFFFFFFFC) | 2;

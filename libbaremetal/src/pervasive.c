@@ -8,6 +8,8 @@
 #define PERVASIVE_MISC_BASE_ADDR	0xE3100000
 #define PERVASIVE2_BASE_ADDR		0xE3110000
 
+#define PERVASIVE_MISC_SOC_REVISION	0x000
+
 #define PERVASIVE_BASECLK_MSIF		((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0xB0))
 #define PERVASIVE_BASECLK_DSI_REGS(i)	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x180 - (i) * 0x80))
 #define PERVASIVE_BASECLK_HDMI_CEC	((void *)(PERVASIVE_BASECLK_BASE_ADDR + 0x1D0))
@@ -138,9 +140,9 @@ pervasive_get_dsi_timing_info_for_pixelclock(uint32_t pixelclock)
 	return NULL;
 }
 
-uint32_t pervasive_read_misc(uint32_t offset)
+uint32_t pervasive_get_soc_revision(void)
 {
-	return *(uint32_t *)(PERVASIVE_MISC_BASE_ADDR + offset);
+	return read32(PERVASIVE_MISC_BASE_ADDR + PERVASIVE_MISC_SOC_REVISION);
 }
 
 void pervasive_clock_enable_uart(int bus)

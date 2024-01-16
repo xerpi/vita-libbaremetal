@@ -4,7 +4,7 @@
 #define IFTUREG_BASE_ADDR			0xE5020000
 #define IFTUCREG_BASE_ADDR			0xE5022000
 
-#define IFTU_CREGS(bus)				((void *)IFTUCREG_BASE_ADDR + (bus) * 0x10000)
+#define IFTU_CREGS(bus)				(IFTUCREG_BASE_ADDR + (bus) * 0x10000)
 
 #define IFTU_CREG_CONTROL			0x00
 #define IFTU_CREG_CONTROL_ENABLE		BIT(0)
@@ -17,7 +17,7 @@
 
 #define IFTU_CREG_ALPHA_BLENDING_CONTROL	0x20
 
-#define IFTU_PLANE_REGS(bus, plane)		((void *)IFTUREG_BASE_ADDR + (bus) * 0x10000 + (plane) * 0x1000)
+#define IFTU_PLANE_REGS(bus, plane)		(IFTUREG_BASE_ADDR + (bus) * 0x10000 + (plane) * 0x1000)
 
 #define IFTU_PLANE_ALPHA_VALUE			0x08C
 #define IFTU_PLANE_ALPHA_CONTROL		0x0A0
@@ -68,7 +68,7 @@
 
 void iftu_bus_enable(enum iftu_bus bus)
 {
-	volatile void *cregs = IFTU_CREGS(bus);
+	uintptr_t cregs = IFTU_CREGS(bus);
 
 	write32(IFTU_CREG_CONTROL_ENABLE, cregs + IFTU_CREG_CONTROL);
 	write32(IFTU_CREG_CONTROL2_ALPHA_EN, cregs + IFTU_CREG_CONTROL2);
@@ -77,7 +77,7 @@ void iftu_bus_enable(enum iftu_bus bus)
 
 void iftu_bus_plane_config_select(enum iftu_bus bus, enum iftu_plane plane, enum iftu_plane_config config)
 {
-	volatile void *cregs = IFTU_CREGS(bus);
+	uintptr_t cregs = IFTU_CREGS(bus);
 
 	write32(config, cregs + IFTU_CREG_PLANE_CONFIG_BASE(plane) +
 			       IFTU_CREG_PLANE_CONFIG_SELECT);
@@ -86,7 +86,7 @@ void iftu_bus_plane_config_select(enum iftu_bus bus, enum iftu_plane plane, enum
 
 void iftu_bus_alpha_blending_control(enum iftu_bus bus, int ctrl)
 {
-	volatile void *cregs = IFTU_CREGS(bus);
+	uintptr_t cregs = IFTU_CREGS(bus);
 
 	write32(ctrl, cregs + IFTU_CREG_ALPHA_BLENDING_CONTROL);
 	dmb();
@@ -94,7 +94,7 @@ void iftu_bus_alpha_blending_control(enum iftu_bus bus, int ctrl)
 
 void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane, uint32_t alpha)
 {
-	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+	uintptr_t regs = IFTU_PLANE_REGS(bus, plane);
 
 	if (alpha == 256)
 		write32(0, regs + IFTU_PLANE_ALPHA_VALUE);
@@ -108,7 +108,7 @@ void iftu_plane_set_alpha(enum iftu_bus bus, enum iftu_plane plane, uint32_t alp
 
 void iftu_plane_set_csc_enabled(enum iftu_bus bus, enum iftu_plane plane, bool enabled)
 {
-	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+	uintptr_t regs = IFTU_PLANE_REGS(bus, plane);
 
 	write32(enabled, regs + IFTU_PLANE_CSC_CONTROL);
 
@@ -117,7 +117,7 @@ void iftu_plane_set_csc_enabled(enum iftu_bus bus, enum iftu_plane plane, bool e
 
 void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane, const struct iftu_csc_params *csc)
 {
-	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+	uintptr_t regs = IFTU_PLANE_REGS(bus, plane);
 
 	write32(csc->unk00, regs + IFTU_PLANE_CSC_UNK_104);
 	write32(csc->unk04, regs + IFTU_PLANE_CSC_UNK_108);
@@ -136,7 +136,7 @@ void iftu_plane_set_csc0(enum iftu_bus bus, enum iftu_plane plane, const struct 
 
 void iftu_plane_set_csc1(enum iftu_bus bus, enum iftu_plane plane, const struct iftu_csc_params *csc)
 {
-	volatile void *regs = IFTU_PLANE_REGS(bus, plane);
+	uintptr_t regs = IFTU_PLANE_REGS(bus, plane);
 
 	write32(csc->unk00, regs + IFTU_PLANE_CSC_UNK_130);
 	write32(csc->unk04, regs + IFTU_PLANE_CSC_UNK_134);
@@ -163,7 +163,7 @@ void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
 				  uint32_t dst_x, uint32_t dst_y,
 				  uint32_t dst_w, uint32_t dst_h)
 {
-	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
+	uintptr_t regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
 
 	/* TODO: Properly use pitch instead of width */
 
@@ -188,7 +188,7 @@ void iftu_plane_config_set_config(enum iftu_bus bus, enum iftu_plane plane,
 void iftu_plane_config_set_enabled(enum iftu_bus bus, enum iftu_plane plane,
 				   enum iftu_plane_config config, bool enabled)
 {
-	volatile void *regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
+	uintptr_t regs = IFTU_PLANE_CONFIG_REGS(bus, plane, config);
 
 	write32(!enabled, regs + IFTU_PLANE_CONFIG_CONTROL);
 

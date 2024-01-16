@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-uint32_t pervasive_read_misc(uint32_t offset);
+uint32_t pervasive_get_soc_revision(void);
 
 void pervasive_clock_enable_uart(int bus);
 void pervasive_reset_exit_uart(int bus);
