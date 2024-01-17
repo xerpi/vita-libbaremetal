@@ -10,6 +10,8 @@
 #define dsb() asm volatile("dsb\n\t" ::: "memory")
 #define wfe() asm volatile("wfe\n\t" ::: "memory")
 
+typedef uint32_t u32;
+
 static inline uint32_t rbit(uint32_t x)
 {
 	uint32_t xrev;
