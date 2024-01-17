@@ -361,6 +361,15 @@ enum mmc_voltage {
 #define MMC_TIMING_MMC_HS200	9
 #define MMC_TIMING_MMC_HS400	10
 
+struct mmc_cid {
+	unsigned long psn;
+	unsigned short oid;
+	unsigned char mid;
+	unsigned char prv;
+	unsigned char mdt;
+	char pnm[7];
+};
+
 struct mmc_cmd {
 	uint16_t cmdidx;
 	uint32_t resp_type;

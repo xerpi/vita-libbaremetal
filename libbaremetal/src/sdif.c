@@ -5,6 +5,9 @@
 #include "sysroot.h"
 #include "utils.h"
 
+#include "uart.h"
+#define printf(...) uart_printf(0, __VA_ARGS__)
+
 #define udelay(x) delay((x) / 100)
 
 #define SDIF_RESET_HW (1 << 0)
@@ -13,7 +16,38 @@
 static struct sdif_host_status {
 	uint32_t version;
 	uint32_t voltages;
-} g_sdif_host_status[SDIF_HOST__MAX];
+	uint32_t ocr;
+	uint32_t dsr;
+	uint32_t dsr_imp;
+	uint32_t csd[4];
+	uint32_t cid[4];
+	uint16_t rca;
+	uint8_t part_config;
+	uint32_t legacy_speed; /* speed for the legacy mode provided by the card */
+	uint32_t read_bl_len;
+	uint32_t write_bl_len;
+	bool op_cond_pending;
+	bool high_capacity;
+	uint32_t erase_grp_size; /* in 512-byte sectors */
+	uint64_t capacity;
+	uint64_t capacity_user;
+	uint64_t capacity_boot;
+	uint64_t capacity_rpmb;
+	uint64_t capacity_gp[4];
+} g_sdif_host[SDIF_HOST__MAX];
+
+/* frequency bases */
+/* divided by 10 to be nice to platforms without floating point */
+static const int fbase[] = {
+	10000, 100000, 1000000, 10000000,
+};
+
+/* Multiplier values for TRAN_SPEED.  Multiplied by 10 to be nice
+ * to platforms without floating point.
+ */
+static const uint8_t multipliers[] = {
+	0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80,
+};
 
 static int g_skip_sdif0_reset = 0;
 
@@ -158,20 +192,20 @@ static int sdif_reset(enum sdif_host host, int flags)
 
 		switch(host) {
 		case SDIF_HOST_EMMC:
-			g_sdif_host_status[host].voltages = MMC_VDD_165_195;
+			g_sdif_host[host].voltages = MMC_VDD_165_195;
 			pervasive_sdif_misc_0x124(0, 1);
 			break;
 		case SDIF_HOST_GC:
 		case SDIF_HOST_MICRO_SD:
-			g_sdif_host_status[host].voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
+			g_sdif_host[host].voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
 			pervasive_sdif_misc_0x124(host, 0);
 			break;
 		case SDIF_HOST_WLAN_BT:
-			g_sdif_host_status[host].voltages = MMC_VDD_165_195;
+			g_sdif_host[host].voltages = MMC_VDD_165_195;
 			pervasive_sdif_misc_0x124(2, 1);
 			break;
 		default:
-			g_sdif_host_status[host].voltages = 0;
+			g_sdif_host[host].voltages = 0;
 			break;
 		}
 	}
@@ -267,6 +301,22 @@ static int sdif_bus_voltage_select(enum sdif_host host, uint8_t voltage)
 	return 0;
 }
 
+static int sdhci_reset(enum sdif_host host, uint8_t mask)
+{
+	int timeout;
+
+	/* Wait max 100 ms */
+	timeout = 100;
+	sdhci_writeb(host, mask, SDHCI_SOFTWARE_RESET);
+	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
+		if (timeout-- <= 0)
+			return SDIF_ERROR_TIMEOUT;
+		udelay(1000);
+	}
+
+	return 0;
+}
+
 static void sdhci_cmd_done(enum sdif_host host, struct mmc_cmd *cmd)
 {
 	int i;
@@ -301,6 +351,8 @@ static int sdif_send_cmd(enum sdif_host host, struct mmc_cmd *cmd, struct mmc_da
 
 	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask)
 		udelay(1000);
+
+	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
 
 	mask = SDHCI_INT_RESPONSE;
 	if ((cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK ||
@@ -361,31 +413,42 @@ static int sdif_send_cmd(enum sdif_host host, struct mmc_cmd *cmd, struct mmc_da
 	if (!ret)
 		return 0;
 
+	sdhci_reset(host, SDHCI_RESET_CMD);
+	sdhci_reset(host, SDHCI_RESET_DATA);
 	if (stat & SDHCI_INT_TIMEOUT)
 		return SDIF_ERROR_TIMEOUT;
 	else
 		return SDIF_ERROR_COMM;
 }
 
-static int sdif_mmc_go_idle(enum sdif_host host)
+static int mmc_go_idle(enum sdif_host host)
 {
 	struct mmc_cmd cmd;
+	int err;
+
+	udelay(1000);
 
 	cmd.cmdidx = MMC_CMD_GO_IDLE_STATE;
 	cmd.cmdarg = 0;
 	cmd.resp_type = MMC_RSP_NONE;
 
-	return sdif_send_cmd(host, &cmd, NULL);
+	err = sdif_send_cmd(host, &cmd, NULL);
+	if (err)
+		return err;
+
+	udelay(2000);
+
+	return 0;
 }
 
-static int sdif_mmc_send_if_cond(enum sdif_host host)
+static int mmc_send_if_cond(enum sdif_host host)
 {
 	struct mmc_cmd cmd;
 	int err;
 
 	cmd.cmdidx = SD_CMD_SEND_IF_COND;
 	/* We set the bit if the host supports voltages between 2.7 and 3.6 V */
-	cmd.cmdarg = ((g_sdif_host_status[host].voltages & 0xff8000) != 0) << 8 | 0xaa;
+	cmd.cmdarg = ((g_sdif_host[host].voltages & 0xff8000) != 0) << 8 | 0xaa;
 	cmd.resp_type = MMC_RSP_R7;
 
 	err = sdif_send_cmd(host, &cmd, NULL);
@@ -395,24 +458,377 @@ static int sdif_mmc_send_if_cond(enum sdif_host host)
 	if ((cmd.response[0] & 0xff) != 0xaa)
 		return SDIF_ERROR_NOTSUPP;
 	else
-		g_sdif_host_status[host].version = SD_VERSION_2;
+		g_sdif_host[host].version = SD_VERSION_2;
 
+	return 0;
+}
+
+static int sd_send_op_cond(enum sdif_host host, bool uhs_en)
+{
+	int timeout = 1000;
+	int err;
+	struct mmc_cmd cmd;
+
+	while (1) {
+		cmd.cmdidx = MMC_CMD_APP_CMD;
+		cmd.resp_type = MMC_RSP_R1;
+		cmd.cmdarg = 0;
+
+		err = sdif_send_cmd(host, &cmd, NULL);
+
+		if (err)
+			return err;
+
+		cmd.cmdidx = SD_CMD_APP_SEND_OP_COND;
+		cmd.resp_type = MMC_RSP_R3;
+		cmd.cmdarg = g_sdif_host[host].voltages & 0xff8000;
+		if (g_sdif_host[host].version == SD_VERSION_2)
+			cmd.cmdarg |= OCR_HCS;
+
+		if (uhs_en)
+			cmd.cmdarg |= OCR_S18R;
+
+		err = sdif_send_cmd(host, &cmd, NULL);
+
+		if (err)
+			return err;
+
+		if (cmd.response[0] & OCR_BUSY)
+			break;
+
+		if (timeout-- <= 0)
+			return SDIF_ERROR_TIMEOUT;
+
+		udelay(1000);
+	}
+
+	if (g_sdif_host[host].version != SD_VERSION_2)
+		g_sdif_host[host].version = SD_VERSION_1_0;
+
+	g_sdif_host[host].ocr = cmd.response[0];
+
+	g_sdif_host[host].high_capacity = ((g_sdif_host[host].ocr & OCR_HCS) == OCR_HCS);
+	g_sdif_host[host].rca = 0;
+
+	return 0;
+}
+
+static int mmc_send_op_cond_iter(enum sdif_host host, int use_arg)
+{
+	struct mmc_cmd cmd;
+	int err;
+
+	cmd.cmdidx = MMC_CMD_SEND_OP_COND;
+	cmd.resp_type = MMC_RSP_R3;
+	cmd.cmdarg = 0;
+	if (use_arg)
+		cmd.cmdarg = OCR_HCS |
+			(g_sdif_host[host].voltages &
+			(g_sdif_host[host].ocr & OCR_VOLTAGE_MASK)) |
+			(g_sdif_host[host].ocr & OCR_ACCESS_MODE);
+
+	err = sdif_send_cmd(host, &cmd, NULL);
+	if (err)
+		return err;
+	g_sdif_host[host].ocr = cmd.response[0];
+	return 0;
+}
+
+static int mmc_send_op_cond(enum sdif_host host)
+{
+	int err, i;
+
+	/* Some cards seem to need this */
+	mmc_go_idle(host);
+
+	/* Asking to the card its capabilities */
+	for (i = 0; ; i++) {
+		err = mmc_send_op_cond_iter(host, i != 0);
+		if (err)
+			return err;
+
+		/* exit if not busy (flag seems to be inverted) */
+		if (g_sdif_host[host].ocr & OCR_BUSY)
+			break;
+
+		udelay(100);
+	}
+	g_sdif_host[host].op_cond_pending = true;
+	return 0;
+}
+
+static int mmc_complete_op_cond(enum sdif_host host)
+{
+	int err;
+
+	g_sdif_host[host].op_cond_pending = false;
+	if (!(g_sdif_host[host].ocr & OCR_BUSY)) {
+		/* Some cards seem to need this */
+		mmc_go_idle(host);
+
+		while (1) {
+			err = mmc_send_op_cond_iter(host, 1);
+			if (err)
+				return err;
+			if (g_sdif_host[host].ocr & OCR_BUSY)
+				break;
+			udelay(100);
+		}
+	}
+
+	g_sdif_host[host].version = MMC_VERSION_UNKNOWN;
+
+	g_sdif_host[host].high_capacity = ((g_sdif_host[host].ocr & OCR_HCS) == OCR_HCS);
+	g_sdif_host[host].rca = 1;
+
+	return 0;
+}
+
+static int mmc_get_op_cond(enum sdif_host host)
+{
+	int err;
+	bool uhs_en = false;
+
+retry:
+	/* Reset the Card */
+	err = mmc_go_idle(host);
+	if (err)
+		return err;
+
+	/* Test for SD version 2 */
+	err = mmc_send_if_cond(host);
+
+	/* Now try to get the SD card's operating condition */
+	err = sd_send_op_cond(host, uhs_en);
+	if (err && uhs_en) {
+		uhs_en = false;
+		// mmc_power_cycle(host);
+		goto retry;
+	}
+
+	/* If the command timed out, we check for an MMC card */
+	if (err == SDIF_ERROR_TIMEOUT) {
+		err = mmc_send_op_cond(host);
+		if (err)
+			return SDIF_ERROR_NOTSUPP;
+	}
+
+	return err;
+}
+
+static int mmc_startup(enum sdif_host host)
+{
+	int err, i;
+	uint32_t mult, freq;
+	uint64_t cmult, csize;
+	struct mmc_cmd cmd;
+	//struct blk_desc *bdesc;
+
+	/* Put the Card in Identify Mode */
+	cmd.cmdidx = MMC_CMD_ALL_SEND_CID;
+	cmd.resp_type = MMC_RSP_R2;
+	cmd.cmdarg = 0;
+
+	err = sdif_send_cmd(host, &cmd, NULL);
+	if (err)
+		return err;
+
+	memcpy(g_sdif_host[host].cid, cmd.response, 16);
+
+	/*
+	 * For MMC cards, set the Relative Address.
+	 * For SD cards, get the Relatvie Address.
+	 * This also puts the cards into Standby State
+	 */
+	cmd.cmdidx = SD_CMD_SEND_RELATIVE_ADDR;
+	cmd.cmdarg = g_sdif_host[host].rca << 16;
+	cmd.resp_type = MMC_RSP_R6;
+
+	err = sdif_send_cmd(host, &cmd, NULL);
+
+	if (err)
+		return err;
+
+	if (IS_SD(&g_sdif_host[host]))
+		g_sdif_host[host].rca = (cmd.response[0] >> 16) & 0xffff;
+
+	/* Get the Card-Specific Data */
+	cmd.cmdidx = MMC_CMD_SEND_CSD;
+	cmd.resp_type = MMC_RSP_R2;
+	cmd.cmdarg = g_sdif_host[host].rca << 16;
+
+	err = sdif_send_cmd(host, &cmd, NULL);
+
+	if (err)
+		return err;
+
+	g_sdif_host[host].csd[0] = cmd.response[0];
+	g_sdif_host[host].csd[1] = cmd.response[1];
+	g_sdif_host[host].csd[2] = cmd.response[2];
+	g_sdif_host[host].csd[3] = cmd.response[3];
+
+	if (g_sdif_host[host].version == MMC_VERSION_UNKNOWN) {
+		int version = (cmd.response[0] >> 26) & 0xf;
+
+		switch (version) {
+		case 0:
+			g_sdif_host[host].version = MMC_VERSION_1_2;
+			break;
+		case 1:
+			g_sdif_host[host].version = MMC_VERSION_1_4;
+			break;
+		case 2:
+			g_sdif_host[host].version = MMC_VERSION_2_2;
+			break;
+		case 3:
+			g_sdif_host[host].version = MMC_VERSION_3;
+			break;
+		case 4:
+			g_sdif_host[host].version = MMC_VERSION_4;
+			break;
+		default:
+			g_sdif_host[host].version = MMC_VERSION_1_2;
+			break;
+		}
+	}
+
+
+	/* divide frequency by 10, since the mults are 10x bigger */
+	freq = fbase[(cmd.response[0] & 0x7)];
+	mult = multipliers[((cmd.response[0] >> 3) & 0xf)];
+
+	g_sdif_host[host].legacy_speed = freq * mult;
+	//mmc_select_mode(mmc, MMC_LEGACY);
+
+	g_sdif_host[host].dsr_imp = ((cmd.response[1] >> 12) & 0x1);
+	g_sdif_host[host].read_bl_len = 1 << ((cmd.response[1] >> 16) & 0xf);
+	if (IS_SD(&g_sdif_host[host]))
+		g_sdif_host[host].write_bl_len = g_sdif_host[host].read_bl_len;
+	else
+		g_sdif_host[host].write_bl_len = 1 << ((cmd.response[3] >> 22) & 0xf);
+
+	if (g_sdif_host[host].high_capacity) {
+		csize = (g_sdif_host[host].csd[1] & 0x3f) << 16
+			| (g_sdif_host[host].csd[2] & 0xffff0000) >> 16;
+		cmult = 8;
+	} else {
+		csize = (g_sdif_host[host].csd[1] & 0x3ff) << 2
+			| (g_sdif_host[host].csd[2] & 0xc0000000) >> 30;
+		cmult = (g_sdif_host[host].csd[2] & 0x00038000) >> 15;
+	}
+
+	g_sdif_host[host].capacity_user = (csize + 1) << (cmult + 2);
+	g_sdif_host[host].capacity_user *= g_sdif_host[host].read_bl_len;
+	g_sdif_host[host].capacity_boot = 0;
+	g_sdif_host[host].capacity_rpmb = 0;
+	for (i = 0; i < 4; i++)
+		g_sdif_host[host].capacity_gp[i] = 0;
+
+	if (g_sdif_host[host].read_bl_len > MMC_MAX_BLOCK_LEN)
+		g_sdif_host[host].read_bl_len = MMC_MAX_BLOCK_LEN;
+
+	if (g_sdif_host[host].write_bl_len > MMC_MAX_BLOCK_LEN)
+		g_sdif_host[host].write_bl_len = MMC_MAX_BLOCK_LEN;
+
+	if ((g_sdif_host[host].dsr_imp) && (0xffffffff != g_sdif_host[host].dsr)) {
+		cmd.cmdidx = MMC_CMD_SET_DSR;
+		cmd.cmdarg = (g_sdif_host[host].dsr & 0xffff) << 16;
+		cmd.resp_type = MMC_RSP_NONE;
+		if (sdif_send_cmd(host, &cmd, NULL))
+			printf("MMC: SET_DSR failed\n");
+	}
+
+	/* Select the card, and put it into Transfer Mode */
+	cmd.cmdidx = MMC_CMD_SELECT_CARD;
+	cmd.resp_type = MMC_RSP_R1;
+	cmd.cmdarg = g_sdif_host[host].rca << 16;
+	err = sdif_send_cmd(host, &cmd, NULL);
+
+	if (err)
+		return err;
+
+	/*
+	 * For SD, its erase group is always one sector
+	 */
+	g_sdif_host[host].erase_grp_size = 1;
+	g_sdif_host[host].part_config = MMCPART_NOAVAILABLE;
+
+#if 0
+	err = mmc_startup_v4(host);
+	if (err)
+		return err;
+
+	err = mmc_set_capacity(host, mmc_get_blk_desc(mmc)->hwpart);
+	if (err)
+		return err;
+
+#if 1 /* CONFIG_IS_ENABLED(MMC_TINY) */
+	mmc_set_clock(mmc, g_sdif_host[host].legacy_speed, false);
+	mmc_select_mode(mmc, MMC_LEGACY);
+	mmc_set_bus_width(mmc, 1);
+#else
+	if (IS_SD(mmc)) {
+		err = sd_get_capabilities(mmc);
+		if (err)
+			return err;
+		err = sd_select_mode_and_width(mmc, g_sdif_host[host].card_caps);
+	} else {
+		err = mmc_get_capabilities(mmc);
+		if (err)
+			return err;
+		err = mmc_select_mode_and_width(mmc, g_sdif_host[host].card_caps);
+	}
+#endif
+	if (err)
+		return err;
+
+	g_sdif_host[host].best_mode = g_sdif_host[host].selected_mode;
+
+	/* Fix the block length for DDR mode */
+	if (g_sdif_host[host].ddr_mode) {
+		g_sdif_host[host].read_bl_len = MMC_MAX_BLOCK_LEN;
+		g_sdif_host[host].write_bl_len = MMC_MAX_BLOCK_LEN;
+	}
+
+	/* fill in device description */
+	bdesc = mmc_get_blk_desc(mmc);
+	bdesc->lun = 0;
+	bdesc->hwpart = 0;
+	bdesc->type = 0;
+	bdesc->blksz = g_sdif_host[host].read_bl_len;
+	bdesc->log2blksz = LOG2(bdesc->blksz);
+	bdesc->lba = lldiv(g_sdif_host[host].capacity, g_sdif_host[host].read_bl_len);
+	sprintf(bdesc->vendor, "Man %06x Snr %04x%04x",
+		g_sdif_host[host].cid[0] >> 24, (g_sdif_host[host].cid[2] & 0xffff),
+		(g_sdif_host[host].cid[3] >> 16) & 0xffff);
+	sprintf(bdesc->product, "%c%c%c%c%c%c", g_sdif_host[host].cid[0] & 0xff,
+		(g_sdif_host[host].cid[1] >> 24), (g_sdif_host[host].cid[1] >> 16) & 0xff,
+		(g_sdif_host[host].cid[1] >> 8) & 0xff, g_sdif_host[host].cid[1] & 0xff,
+		(g_sdif_host[host].cid[2] >> 24) & 0xff);
+	sprintf(bdesc->revision, "%d.%d", (g_sdif_host[host].cid[2] >> 20) & 0xf,
+		(g_sdif_host[host].cid[2] >> 16) & 0xf);
+
+	// part_init(bdesc);
+#endif
 	return 0;
 }
 
 static int sdif_init_cmd_sequence(enum sdif_host host)
 {
-	int ret;
+	int err;
 
-	ret = sdif_mmc_go_idle(host);
-	if (ret)
-		return ret;
+	err = mmc_get_op_cond(host);
+	if (err)
+		return err;
 
-	ret = sdif_mmc_send_if_cond(host);
-	if (ret)
-		return ret;
+	err = 0;
+	if (g_sdif_host[host].op_cond_pending)
+		err = mmc_complete_op_cond(host);
 
-	return 0;
+	if (!err)
+		err = mmc_startup(host);
+
+	return err;
 }
 
 int sdif_init(enum sdif_host host)
@@ -426,11 +842,11 @@ int sdif_init(enum sdif_host host)
 	if (sdif_is_card_inserted(host)) {
 		uint8_t voltage;
 
-		if (g_sdif_host_status[host].voltages & (MMC_VDD_32_33 | MMC_VDD_33_34))
+		if (g_sdif_host[host].voltages & (MMC_VDD_32_33 | MMC_VDD_33_34))
 			voltage = SDHCI_POWER_330;
-		else if (g_sdif_host_status[host].voltages & (MMC_VDD_29_30 | MMC_VDD_30_31))
+		else if (g_sdif_host[host].voltages & (MMC_VDD_29_30 | MMC_VDD_30_31))
 			voltage = SDHCI_POWER_300;
-		else if (g_sdif_host_status[host].voltages & MMC_VDD_165_195)
+		else if (g_sdif_host[host].voltages & MMC_VDD_165_195)
 			voltage = SDHCI_POWER_180;
 		else
 			voltage = 0;
