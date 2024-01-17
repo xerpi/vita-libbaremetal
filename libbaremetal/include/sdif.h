@@ -6,6 +6,12 @@
 #include "mmc.h"
 #include "sdhci.h"
 
+enum sdif_error {
+	SDIF_ERROR_OK = 0,
+	SDIF_ERROR_COMM = -1,
+	SDIF_ERROR_TIMEOUT = -2
+};
+
 enum sdif_device {
 	SDIF_DEVICE_EMMC = 0,
 	SDIF_DEVICE_GC = 1,
@@ -14,14 +20,11 @@ enum sdif_device {
 	SDIF_DEVICE__MAX
 };
 
-enum sdif_bus_voltage {
-	SDIF_BUS_VOLTAGE_1V8 = 0x5,
-	SDIF_BUS_VOLTAGE_3V0 = 0x6,
-	SDIF_BUS_VOLTAGE_3V3 = 0x7
-};
-
 int sdif_init(enum sdif_device device);
 bool sdif_is_card_inserted(enum sdif_device device);
-void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage voltage);
+void sdif_bus_voltage_select(enum sdif_device device, uint8_t voltage);
+
+int sdif_send_cmd(enum sdif_device device, struct mmc_cmd *cmd, struct mmc_data *data);
+int sdif_mmc_go_idle(enum sdif_device device);
 
 #endif

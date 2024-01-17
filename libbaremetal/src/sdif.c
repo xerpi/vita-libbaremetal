@@ -5,10 +5,11 @@
 #include "sysroot.h"
 #include "utils.h"
 
+#define udelay(x) delay((x) / 100)
+
 #define SDIF_RESET_HW (1 << 0)
 #define SDIF_RESET_SW (1 << 1)
 
-static uint32_t g_timeout_control[SDIF_DEVICE__MAX];
 static uint32_t g_unk_18[SDIF_DEVICE__MAX];
 static int g_skip_sdif0_reset = 0;
 
@@ -151,7 +152,6 @@ static int sdif_reset(enum sdif_device device, int flags)
 		pervasive_reset_exit_sdif(device);
 		pervasive_clock_enable_sdif(device);
 
-		g_timeout_control[device] = 0xe;
 		switch(device) {
 		case SDIF_DEVICE_EMMC:
 			g_unk_18[device] = 0x80; //1V8
@@ -177,7 +177,7 @@ static int sdif_reset(enum sdif_device device, int flags)
 		while (sdhci_readb(device, SDHCI_SOFTWARE_RESET) & SDHCI_RESET_ALL)
 			;
 
-		sdhci_writeb(device, g_timeout_control[device], SDHCI_TIMEOUT_CONTROL);
+		sdhci_writeb(device, 14, SDHCI_TIMEOUT_CONTROL);
 
 		delay = 102;
 		do {
@@ -199,7 +199,7 @@ static int sdif_reset(enum sdif_device device, int flags)
 		if (device == SDIF_DEVICE_WLAN_BT)
 			enable |= SDHCI_INT_CARD_INT;
 
-		enable = SDHCI_INT_TIMEOUT | SDHCI_INT_CRC |
+		enable |= SDHCI_INT_TIMEOUT | SDHCI_INT_CRC |
 			SDHCI_INT_END_BIT | SDHCI_INT_INDEX |
 			SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_DATA_CRC |
 			SDHCI_INT_DATA_END_BIT | SDHCI_INT_ACMD12ERR |
@@ -217,14 +217,14 @@ int sdif_init(enum sdif_device device)
 	sdif_reset(device, SDIF_RESET_HW | SDIF_RESET_SW);
 
 	if (sdif_is_card_inserted(device)) {
-		enum sdif_bus_voltage voltage;
+		uint8_t voltage;
 
 		if (g_unk_18[device] & 0x300000)
-			voltage = SDIF_BUS_VOLTAGE_3V3;
+			voltage = SDHCI_POWER_330;
 		else if (g_unk_18[device] & 0x60000)
-			voltage = SDIF_BUS_VOLTAGE_3V0;
+			voltage = SDHCI_POWER_300;
 		else if (g_unk_18[device] & (1 << 7))
-			voltage = SDIF_BUS_VOLTAGE_1V8;
+			voltage = SDHCI_POWER_180;
 		else
 			voltage = 0;
 
@@ -239,7 +239,7 @@ bool sdif_is_card_inserted(enum sdif_device device)
 	return !!(sdhci_readl(device, SDHCI_PRESENT_STATE) & SDHCI_CARD_PRESENT);
 }
 
-void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage voltage)
+void sdif_bus_voltage_select(enum sdif_device device, uint8_t voltage)
 {
 	uint8_t tmp8;
 	uint16_t clockctrl, tmp16;
@@ -257,7 +257,7 @@ void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage volt
 		sdhci_writeb(device, tmp8, SDHCI_POWER_CONTROL);
 
 		tmp8 = sdhci_readb(device, SDHCI_POWER_CONTROL);
-		tmp8 |= voltage << 1;
+		tmp8 |= voltage;
 		sdhci_writeb(device, tmp8, SDHCI_POWER_CONTROL);
 
 		tmp8 = sdhci_readb(device, SDHCI_POWER_CONTROL);
@@ -276,7 +276,9 @@ void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage volt
 		while (!(sdhci_readw(device, SDHCI_CLOCK_CONTROL) & SDHCI_CLOCK_INT_STABLE))
 			;
 
-		if (device == SDIF_DEVICE_WLAN_BT) {
+		/* Vita OS turns this on/off if !WLAN/BT when sending commands.
+		 * Here we just leave it enabled */
+		if (/* device == SDIF_DEVICE_WLAN_BT*/ 1) {
 			tmp16 = sdhci_readw(device, SDHCI_CLOCK_CONTROL);
 			tmp16 |= SDHCI_CLOCK_CARD_EN;
 			sdhci_writew(device, tmp16, SDHCI_CLOCK_CONTROL);
@@ -284,4 +286,115 @@ void sdif_bus_voltage_select(enum sdif_device device, enum sdif_bus_voltage volt
 
 		sdhci_writeb(device, 0, SDHCI_HOST_CONTROL);
 	}
+}
+
+static void sdhci_cmd_done(enum sdif_device host, struct mmc_cmd *cmd)
+{
+	int i;
+	if (cmd->resp_type & MMC_RSP_136) {
+		/* CRC is stripped so we need to do some shifting. */
+		for (i = 0; i < 4; i++) {
+			cmd->response[i] = sdhci_readl(host,
+					SDHCI_RESPONSE + (3-i)*4) << 8;
+			if (i != 3)
+				cmd->response[i] |= sdhci_readb(host,
+						SDHCI_RESPONSE + (3-i)*4-1);
+		}
+	} else {
+		cmd->response[0] = sdhci_readl(host, SDHCI_RESPONSE);
+	}
+}
+
+int sdif_send_cmd(enum sdif_device host, struct mmc_cmd *cmd, struct mmc_data *data)
+{
+	unsigned int stat = 0;
+	int ret = 0;
+	uint32_t mask, flags, mode = 0;
+
+	mask = SDHCI_CMD_INHIBIT | SDHCI_DATA_INHIBIT;
+
+	/* We shouldn't wait for data inihibit for stop commands, even
+	   though they might use busy signaling */
+	if (cmd->cmdidx == MMC_CMD_STOP_TRANSMISSION ||
+	    ((cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK ||
+	      cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200) && !data))
+		mask &= ~SDHCI_DATA_INHIBIT;
+
+	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask)
+		udelay(1000);
+
+	mask = SDHCI_INT_RESPONSE;
+	if ((cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK ||
+	     cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200) && !data)
+		mask = SDHCI_INT_DATA_AVAIL;
+
+	if (!(cmd->resp_type & MMC_RSP_PRESENT))
+		flags = SDHCI_CMD_RESP_NONE;
+	else if (cmd->resp_type & MMC_RSP_136)
+		flags = SDHCI_CMD_RESP_LONG;
+	else if (cmd->resp_type & MMC_RSP_BUSY) {
+		flags = SDHCI_CMD_RESP_SHORT_BUSY;
+		mask |= SDHCI_INT_DATA_END;
+	} else
+		flags = SDHCI_CMD_RESP_SHORT;
+
+	if (cmd->resp_type & MMC_RSP_CRC)
+		flags |= SDHCI_CMD_CRC;
+	if (cmd->resp_type & MMC_RSP_OPCODE)
+		flags |= SDHCI_CMD_INDEX;
+	if (data || cmd->cmdidx ==  MMC_CMD_SEND_TUNING_BLOCK ||
+	    cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200)
+		flags |= SDHCI_CMD_DATA;
+
+	/* Set Transfer mode regarding to data flag */
+	if (data) {
+		if (data->blocks > 1)
+			mode |= SDHCI_TRNS_MULTI | SDHCI_TRNS_BLK_CNT_EN;
+
+		if (data->flags == MMC_DATA_READ)
+			mode |= SDHCI_TRNS_READ;
+
+		sdhci_writew(host, SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG,
+				data->blocksize), SDHCI_BLOCK_SIZE);
+		sdhci_writew(host, data->blocks, SDHCI_BLOCK_COUNT);
+		sdhci_writew(host, mode, SDHCI_TRANSFER_MODE);
+	}
+
+	sdhci_writel(host, cmd->cmdarg, SDHCI_ARGUMENT);
+	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->cmdidx, flags), SDHCI_COMMAND);
+	do {
+		stat = sdhci_readl(host, SDHCI_INT_STATUS);
+		if (stat & SDHCI_INT_ERROR)
+			break;
+	} while ((stat & mask) != mask);
+
+	if ((stat & (SDHCI_INT_ERROR | mask)) == mask) {
+		sdhci_cmd_done(host, cmd);
+		sdhci_writel(host, mask, SDHCI_INT_STATUS);
+	} else
+		ret = -1;
+
+	/*if (!ret && data)
+		ret = sdhci_transfer_data(host, data);*/
+
+	stat = sdhci_readl(host, SDHCI_INT_STATUS);
+	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
+	if (!ret)
+		return 0;
+
+	if (stat & SDHCI_INT_TIMEOUT)
+		return SDIF_ERROR_TIMEOUT;
+	else
+		return SDIF_ERROR_COMM;
+}
+
+int sdif_mmc_go_idle(enum sdif_device device)
+{
+	struct mmc_cmd cmd;
+
+	cmd.cmdidx = MMC_CMD_GO_IDLE_STATE;
+	cmd.cmdarg = 0;
+	cmd.resp_type = MMC_RSP_NONE;
+
+	return sdif_send_cmd(device, &cmd, NULL);
 }
