@@ -352,8 +352,10 @@ void pervasive_msif_set_clock(uint32_t clock)
 
 void pervasive_sdif_misc_0x110_0x11C(int bus, uint32_t value)
 {
-	write32(value, PERVASIVE_MISC_BASE_ADDR + 0x110 + bus * 4);
-	dmb();
+	if ((bus < 4) && ((value & 0xfffff8ff) == 0)) {
+		write32(value, PERVASIVE_MISC_BASE_ADDR + 0x110 + bus * 4);
+		dmb();
+	}
 }
 
 void pervasive_sdif_misc_0x124(int bus, uint32_t value)
