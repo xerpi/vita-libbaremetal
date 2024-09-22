@@ -10,6 +10,7 @@
 #include <baremetal/ctrl.h>
 #include <baremetal/touch.h>
 #include <baremetal/msif.h>
+#include <baremetal/sdif.h>
 #include <baremetal/draw.h>
 #include <baremetal/font.h>
 #include <baremetal/utils.h>
@@ -46,6 +47,17 @@ int main(struct sysroot_buffer *sysroot, uint32_t cpu_id)
 	i2c_init_bus(1);
 	syscon_init();
 
+	for (int i = SDIF_HOST_EMMC; i <= SDIF_HOST_EMMC; i++) {
+		int ret;
+		LOG("Start SDIF host %d\n", i);
+
+		if (sdif_is_card_inserted(i)) {
+			LOG("  Card inserted\n");
+			ret = sdif_init(i);
+			LOG("  sdif_init returned: %d\n", ret);
+		}
+	}
+
 	if (sysroot_model_is_dolce())
 		display_init(DISPLAY_TYPE_HDMI);
 	else if (sysroot_model_is_vita2k())
@@ -53,6 +65,7 @@ int main(struct sysroot_buffer *sysroot, uint32_t cpu_id)
 	else
 		display_init(DISPLAY_TYPE_OLED);
 
+#if 0
 	if (pervasive_msif_get_card_insert_state() && (msif_key[0] != 0)) {
 		msif_init();
 		syscon_msif_set_power(1);
@@ -63,17 +76,20 @@ int main(struct sysroot_buffer *sysroot, uint32_t cpu_id)
 		msif_read_sector(0, sector);
 		LOG_BUFFER("MBR:", sector, MS_SECTOR_SIZE);
 	}
+#endif
 
 	gpio_set_port_mode(0, GPIO_PORT_GAMECARD_LED, GPIO_PORT_MODE_OUTPUT);
 	gpio_port_set(0, GPIO_PORT_GAMECARD_LED);
 
 	ctrl_set_analog_sampling(1);
 
+#if 0
 	touch_init();
 	touch_configure(TOUCH_PORT_FRONT | TOUCH_PORT_BACK,
 	                TOUCH_MAX_REPORT_FRONT,
 	                TOUCH_MAX_REPORT_BACK);
 	touch_set_sampling_cycle(TOUCH_PORT_FRONT | TOUCH_PORT_BACK, 0xFF, 0xFF);
+#endif
 
 	LOG("Init done!\n");
 
