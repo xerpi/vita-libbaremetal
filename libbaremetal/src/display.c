@@ -102,8 +102,8 @@ static void display_init_iftu_plane(enum iftu_bus bus, enum iftu_plane plane,
 		dst_x = 0;
 		dst_y = 0;
 	} else {
-		dst_x = 26;
-		dst_y = 15;
+		dst_x = 0;
+		dst_y = 0;
 	}
 
 	iftu_plane_config_set_config(bus, plane, config, &fb_cfg, dst_x, dst_y,
