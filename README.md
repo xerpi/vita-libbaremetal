@@ -30,3 +30,7 @@ Check [this](https://wiki.henkaku.xyz/vita/Keys) for more information.
 Thanks to everybody who contributes to [wiki.henkaku.xyz](https://wiki.henkaku.xyz/) and helps reverse engineering the PSVita OS.
 
 Specially the [Team Molecule](https://twitter.com/teammolecule) (formed by [Davee](https://twitter.com/DaveeFTW), Proxima, [xyz](https://twitter.com/pomfpomfpomf3), and [YifanLu](https://twitter.com/yifanlu)), [TheFloW](https://twitter.com/theflow0), [motoharu](https://github.com/motoharu-gosuto), and everybody at the [HENkaku](https://discord.gg/m7MwpKA) Discord channel.
+
+## License
+
+This project is licensed under the MIT License, see [LICENSE](LICENSE).
