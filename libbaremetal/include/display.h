@@ -3,6 +3,8 @@
 
 #include "iftu.h"
 
+#include <stdint.h>
+
 enum display_type {
 	DISPLAY_TYPE_OLED,
 	DISPLAY_TYPE_LCD,
