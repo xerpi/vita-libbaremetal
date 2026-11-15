@@ -3,6 +3,8 @@
 
 #include "display.h"
 
+#include <stdint.h>
+
 #define RGBA8(r, g, b, a)	((((a) & 0xFF) << 24) | (((b) & 0xFF) << 16) | \
 				 (((g) & 0xFF) <<  8) | (((r) & 0xFF) <<  0))
 

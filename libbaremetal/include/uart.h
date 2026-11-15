@@ -1,6 +1,8 @@
 #ifndef UART_H
 #define UART_H
 
+#include <stdint.h>
+
 int uart_init(int bus, uint32_t baudrate);
 void uart_wait_ready(int bus);
 void uart_write(int bus, uint32_t data);
